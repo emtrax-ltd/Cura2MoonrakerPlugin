@@ -35,7 +35,7 @@ class MoonrakerConfigureOutputDevice(OutputDevice):
         self.setPriority(0)
 
     def requestWrite(self, node, fileName = None, *args, **kwargs):
-        message = Message("To configure your Moonraker printer go to:\n→ Preferences\n  → Printers\n    → select your printer\n    → click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
+        message = Message("To configure your Moonraker printer go to:\n→ Settings\n  → Printer\n    → Manage Printers\n     → select your printer\n    → click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
         message.show()
         self.writeSuccess.emit(self)
 
