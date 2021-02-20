@@ -26,9 +26,9 @@ Cura.MachineAction
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 500;
-        actionDialog.minimumHeight = screenScaleFactor * 180;
+        actionDialog.minimumHeight = screenScaleFactor * 200;
         actionDialog.maximumWidth = screenScaleFactor * 500;
-        actionDialog.maximumHeight = screenScaleFactor * 180;
+        actionDialog.maximumHeight = screenScaleFactor * 200;
     }
 
     Column {
@@ -45,6 +45,13 @@ Cura.MachineAction
             onTextChanged: {
                 base.validUrl = manager.validUrl(urlField.text);
             }
+        }
+
+        Item { width: parent.width; }
+        Label {
+            visible: !base.validUrl;
+            text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/");
+            color: "red";
         }
 
         Item { width: parent.width; }
@@ -68,35 +75,49 @@ Cura.MachineAction
         }
 
         Item { width: parent.width; }
-        Label {
-            visible: !base.validUrl;
-            text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/");
-            color: "red";
+        Label { text: catalog.i18nc("@label", "Output Format"); }
+        RowLayout {
+            id: outputFormat;
+            ExclusiveGroup { id: outputFormatGroup }
+            RadioButton {
+                id: outputFormatGcode;
+                checked: manager.printerOutputFormat != "ufp";
+                text: "G-code";
+                exclusiveGroup: outputFormatGroup;
+            }
+            RadioButton {
+                id: outputFormatUfp;
+                checked: manager.printerOutputFormat == "ufp";
+                text: "UFP with Thumbnail";
+                exclusiveGroup: outputFormatGroup;
+            }
         }
 
         Item {
-            width: saveButton.implicitWidth
-            height: saveButton.implicitHeight
+            width: saveButton.implicitWidth;
+            height: saveButton.implicitHeight;
         }
 
-        Button {
-            id: saveButton;
-            text: catalog.i18nc("@action:button", "Save Config");
-            width: screenScaleFactor * 100;
-            onClicked: {
-                manager.saveConfig(urlField.text, http_userField.text, http_passwordField.text);
-                actionDialog.reject();
+        RowLayout {
+            Button {
+                id: saveButton;
+                text: catalog.i18nc("@action:button", "Save Config");
+                width: screenScaleFactor * 100;
+                onClicked: {
+                    manager.saveConfig(urlField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked);
+                    actionDialog.reject();
+                }
+                enabled: base.validUrl;
             }
-            enabled: base.validUrl;
-        }
 
-        Button {
-            id: deleteButton;
-            text: catalog.i18nc("@action:button", "Remove Config");
-            width: screenScaleFactor * 100;
-            onClicked: {
-                manager.deleteConfig();
-                actionDialog.reject();
+            Button {
+                id: deleteButton;
+                text: catalog.i18nc("@action:button", "Remove Config");
+                width: screenScaleFactor * 100;
+                onClicked: {
+                    manager.deleteConfig();
+                    actionDialog.reject();
+                }
             }
         }
     }

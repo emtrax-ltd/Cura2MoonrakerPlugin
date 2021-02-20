@@ -1,26 +1,25 @@
-import os.path
 import base64
-import urllib
 import json
-from io import StringIO
-from time import time, sleep
-from typing import cast
+import os.path
+import urllib
 from enum import Enum
-
-from PyQt5.QtCore import QUrl, QObject, QByteArray, QVariant
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkRequest, QNetworkReply
+from io import BytesIO, StringIO
+from typing import cast
 
 from cura.CuraApplication import CuraApplication
 
+from PyQt5.QtCore import QByteArray, QObject, QUrl, QVariant
+from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest
+
 from UM.Application import Application
-from UM.Logger import Logger
-from UM.Message import Message
-from UM.Mesh.MeshWriter import MeshWriter
-from UM.PluginRegistry import PluginRegistry
-from UM.OutputDevice.OutputDevice import OutputDevice
-from UM.OutputDevice import OutputDeviceError
 from UM.i18n import i18nCatalog
+from UM.Logger import Logger
+from UM.Mesh.MeshWriter import MeshWriter
+from UM.Message import Message
+from UM.OutputDevice import OutputDeviceError
+from UM.OutputDevice.OutputDevice import OutputDevice
+from UM.PluginRegistry import PluginRegistry
 
 catalog = i18nCatalog("cura")
 
@@ -48,10 +47,14 @@ class MoonrakerOutputDevice(OutputDevice):
         self._url = config["url"]
         self._http_user = config["http_user"]
         self._http_password = config["http_password"]
+        self._output_format = config.get("output_format", "gcode")
+        if self._output_format and self._output_format != "ufp":
+            self._output_format = "gcode"
 
         self.application = CuraApplication.getInstance()
         global_container_stack = self.application.getGlobalContainerStack()
         self._name = global_container_stack.getName()
+
 
         description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
         self.setShortDescription(description)
@@ -68,19 +71,38 @@ class MoonrakerOutputDevice(OutputDevice):
         if self._stage != OutputStage.ready:
             raise OutputDeviceError.DeviceBusyError()
 
-        if fileName:
-            fileName = os.path.splitext(fileName)[0] + '.gcode'
+        # Make sure post-processing plugin are run on the gcode
+        self.writeStarted.emit(self)
+
+        # The presliced print should always be send using `GCodeWriter`
+        print_info = CuraApplication.getInstance().getPrintInformation()
+        if self._output_format != "ufp" or not print_info or print_info.preSliced:
+            self._output_format = "gcode"
+            code_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
+            self._stream = StringIO()
         else:
-            fileName = "%s.gcode" % Application.getInstance().getPrintInformation().jobName
+            code_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("UFPWriter"))
+            self._stream = BytesIO()
+
+        if not code_writer.write(self._stream, None):
+            Logger.log("e", "MeshWriter failed: %s" % code_writer.getInformation())
+            return
+
+        # Prepare filename for upload
+        if fileName:
+            fileName = os.path.splitext(fileName)[0] + '.' + self._output_format
+        else:
+            fileName = "%s." + self._output_format % Application.getInstance().getPrintInformation().jobName
         self._fileName = fileName
 
+        # Display upload dialog
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'MoonrakerUpload.qml')
         self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
         self._dialog.textChanged.connect(self.onFilenameChanged)
         self._dialog.accepted.connect(self.onFilenameAccepted)
         self._dialog.show()
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
-        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
+        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._output_format) - 1)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
 
     def onFilenameChanged(self):
@@ -104,36 +126,19 @@ class MoonrakerOutputDevice(OutputDevice):
 
     def onFilenameAccepted(self):
         self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
-        if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
-            self._fileName += '.gcode'
-
+        if not self._fileName.endswith('.' + self._output_format) and '.' not in self._fileName:
+            self._fileName += '.' + self._output_format
         Logger.log("d", "Filename set to: " + self._fileName)
 
         self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
         Logger.log("d", "Print set to: " + str(self._startPrint))
 
-
         self._dialog.deleteLater()
-
-        # create the temp file for the gcode
-        self._stream = StringIO()
         self._stage = OutputStage.writing
-        self.writeStarted.emit(self)
 
         # show a progress message
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
         self._message.show()
-
-        # get the g-code through the GCodeWrite plugin
-        # this serializes the actual scene and should produce the same output as "Save to File"
-        Logger.log("d", "Loading gcode...")
-        gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
-        success = gcode_writer.write(self._stream, None)
-        if not success:
-            Logger.log("e", "GCodeWrite failed")
-            return
-
-        # start
         Logger.log("d", "Connecting to Moonraker...")
         self._sendRequest('printer/info', on_success = self.onInstanceOnline)
 
@@ -144,13 +149,16 @@ class MoonrakerOutputDevice(OutputDevice):
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", "Uploading gcode...")
+        Logger.log("d", "Uploading " + self._output_format + "...")
         self._stream.seek(0)
         self._postData = QByteArray()
-        self._postData.append(self._stream.getvalue().encode())
-        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onGcodeUploaded)
+        if isinstance(self._stream, BytesIO):
+            self._postData.append(self._stream.getvalue())
+        else:
+            self._postData.append(self._stream.getvalue().encode())
+        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onCodeUploaded)
 
-    def onGcodeUploaded(self, reply):
+    def onCodeUploaded(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:

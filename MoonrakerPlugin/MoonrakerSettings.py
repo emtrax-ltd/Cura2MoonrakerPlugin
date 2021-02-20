@@ -25,12 +25,13 @@ def get_config():
         return s[printer_id]
     return {}
 
-def save_config(url, http_user, http_password):
+def save_config(url, http_user, http_password, output_format):
     s, printer_id = _load_prefs()
     s[printer_id] = {
             "url": url,
             "http_user": http_user,
             "http_password": http_password,
+            "output_format": output_format
         }
     application = CuraApplication.getInstance()
     p = application.getPreferences()

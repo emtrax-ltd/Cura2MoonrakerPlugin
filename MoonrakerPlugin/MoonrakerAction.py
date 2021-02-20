@@ -31,6 +31,7 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsUrlChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerOutputFormatChanged.emit()
 
     def _onContainerAdded(self, container: "ContainerInterface") -> None:
         # Add this action as a supported action to all machine definitions
@@ -44,10 +45,12 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsUrlChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerOutputFormatChanged.emit()
 
     printerSettingsUrlChanged = pyqtSignal()
     printerSettingsHTTPUserChanged = pyqtSignal()
     printerSettingsHTTPPasswordChanged = pyqtSignal()
+    printerOutputFormatChanged = pyqtSignal()
 
     @pyqtProperty(str, notify = printerSettingsUrlChanged)
     def printerSettingUrl(self) -> Optional[str]:
@@ -70,12 +73,19 @@ class MoonrakerAction(MachineAction):
             return s["http_password"]
         return ""
 
-    @pyqtSlot(str, str, str)
-    def saveConfig(self, url, http_user, http_password):
+    @pyqtProperty(str, notify = printerOutputFormatChanged)
+    def printerOutputFormat(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("output_format", "gcode")
+        return "gcode"
+
+    @pyqtSlot(str, str, str, bool)
+    def saveConfig(self, url, http_user, http_password, output_format_ufp):
         if not url.endswith('/'):
             url += '/'
 
-        save_config(url, http_user, http_password)
+        save_config(url, http_user, http_password, "ufp" if output_format_ufp == True else "gcode")
         Logger.log("d", "config saved")
 
         # trigger a stack change to reload the output devices

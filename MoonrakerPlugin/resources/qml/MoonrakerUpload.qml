@@ -13,7 +13,7 @@ UM.Dialog
     property alias newName: nameField.text;
     property bool validName: true;
     property string validationError;
-    property string dialogTitle: "Upload G-code";
+    property string dialogTitle: "Upload to Moonraker";
 
     title: dialogTitle;
 
