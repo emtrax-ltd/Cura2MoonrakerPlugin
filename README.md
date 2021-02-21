@@ -26,3 +26,7 @@ To configure your Moonraker 3D printer...
 1. Open your STL model in Cura and click `Slice`.
 2. Click the small up arrow on the right and select `Upload to <Your Printername>`:
 3. Now you can modify the filename, select the option to create a print job and finally... click `Upload` :)
+
+----
+
+<a href="https://www.buymeacoffee.com/emtrax" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
