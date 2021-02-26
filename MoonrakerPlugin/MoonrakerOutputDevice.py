@@ -234,7 +234,7 @@ class MoonrakerOutputDevice(OutputDevice):
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
         if self._http_user and self._http_password:
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
-            headers['Authorization'] = 'Basic ' + base64.b64encode(auth)
+            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8");
 
         if data:
             # Create multi_part request           
