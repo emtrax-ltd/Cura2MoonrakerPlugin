@@ -110,7 +110,7 @@ class MoonrakerOutputDevice(OutputDevice):
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
 
-        forbidden_characters = "\"'´`<>()[]?*\,;:&%#$!"
+        forbidden_characters = "\/:*?\"<>|"
         for forbidden_character in forbidden_characters:
             if forbidden_character in fileName:
                 self._dialog.setProperty('validName', False)
