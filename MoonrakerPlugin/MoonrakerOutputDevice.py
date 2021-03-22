@@ -44,9 +44,10 @@ class MoonrakerOutputDevice(OutputDevice):
         self._name_id = "moonraker-upload"
         super().__init__(self._name_id)
 
-        self._url = config["url"]
-        self._http_user = config["http_user"]
-        self._http_password = config["http_password"]
+        self._url = config.get("url", "")
+        self._api_key = config.get("api_key", "")
+        self._http_user = config.get("http_user", "")
+        self._http_password = config.get("http_password", "")
         self._output_format = config.get("output_format", "gcode")
         if self._output_format and self._output_format != "ufp":
             self._output_format = "gcode"
@@ -64,7 +65,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._stream = None
         self._message = None
 
-        Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | HTTP Basic Auth: user:{}, password:{}".format(self._name_id, self._url, self._http_user if self._http_user else "<empty>", "set" if self._http_password else "<empty>",))
+        Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {} | HTTP Basic Auth: user:{}, password:{}".format(self._name_id, self._url, self._api_key, self._http_user if self._http_user else "<empty>", "set" if self._http_password else "<empty>",))
         self._resetState()
 
     def requestWrite(self, node, fileName = None, *args, **kwargs):
@@ -232,6 +233,10 @@ class MoonrakerOutputDevice(OutputDevice):
         url = self._url + path
 
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
+
+        if self._api_key:
+            headers['X-API-Key'] = self._api_key;
+
         if self._http_user and self._http_password:
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
             headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8");

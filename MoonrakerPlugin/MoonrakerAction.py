@@ -29,6 +29,7 @@ class MoonrakerAction(MachineAction):
 
     def _onGlobalContainerStackChanged(self) -> None:
         self.printerSettingsUrlChanged.emit()
+        self.printerSettingsAPIKeyChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
         self.printerOutputFormatChanged.emit()
@@ -43,11 +44,13 @@ class MoonrakerAction(MachineAction):
 
     def _reset(self) -> None:
         self.printerSettingsUrlChanged.emit()
+        self.printerSettingsAPIKeyChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
         self.printerOutputFormatChanged.emit()
 
     printerSettingsUrlChanged = pyqtSignal()
+    printerSettingsAPIKeyChanged = pyqtSignal()
     printerSettingsHTTPUserChanged = pyqtSignal()
     printerSettingsHTTPPasswordChanged = pyqtSignal()
     printerOutputFormatChanged = pyqtSignal()
@@ -56,21 +59,28 @@ class MoonrakerAction(MachineAction):
     def printerSettingUrl(self) -> Optional[str]:
         s = get_config()
         if s:
-            return s["url"]
+            return s.get("url", "")
+        return ""
+
+    @pyqtProperty(str, notify = printerSettingsAPIKeyChanged)
+    def printerSettingAPIKey(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("api_key", "")
         return ""
 
     @pyqtProperty(str, notify = printerSettingsHTTPUserChanged)
     def printerSettingHTTPUser(self) -> Optional[str]:
         s = get_config()
         if s:
-            return s["http_user"]
+            return s.get("http_user", "")
         return ""
 
     @pyqtProperty(str, notify = printerSettingsHTTPPasswordChanged)
     def printerSettingHTTPPassword(self) -> Optional[str]:
         s = get_config()
         if s:
-            return s["http_password"]
+            return s.get("http_password", "")
         return ""
 
     @pyqtProperty(str, notify = printerOutputFormatChanged)
@@ -80,12 +90,12 @@ class MoonrakerAction(MachineAction):
             return s.get("output_format", "gcode")
         return "gcode"
 
-    @pyqtSlot(str, str, str, bool)
-    def saveConfig(self, url, http_user, http_password, output_format_ufp):
+    @pyqtSlot(str, str, str, str, bool)
+    def saveConfig(self, url, api_key, http_user, http_password, output_format_ufp):
         if not url.endswith('/'):
             url += '/'
 
-        save_config(url, http_user, http_password, "ufp" if output_format_ufp == True else "gcode")
+        save_config(url, api_key, http_user, http_password, "ufp" if output_format_ufp == True else "gcode")
         Logger.log("d", "config saved")
 
         # trigger a stack change to reload the output devices

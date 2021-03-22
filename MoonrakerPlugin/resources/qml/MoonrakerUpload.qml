@@ -18,7 +18,7 @@ UM.Dialog
     title: dialogTitle;
 
     minimumWidth: screenScaleFactor * 400
-    minimumHeight: screenScaleFactor * 80
+    minimumHeight: screenScaleFactor * 100
 
     property variant catalog: UM.I18nCatalog { name: "uranium"; }
 
@@ -54,6 +54,8 @@ UM.Dialog
             color: "red";
         }
 
+        Item { width: parent.width;  height: 10; }
+        
         CheckBox {
             objectName: "printField";
             id: printField;

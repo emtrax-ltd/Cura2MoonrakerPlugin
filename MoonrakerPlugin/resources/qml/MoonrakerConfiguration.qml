@@ -26,9 +26,9 @@ Cura.MachineAction
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 500;
-        actionDialog.minimumHeight = screenScaleFactor * 220;
+        actionDialog.minimumHeight = screenScaleFactor * 300;
         actionDialog.maximumWidth = screenScaleFactor * 500;
-        actionDialog.maximumHeight = screenScaleFactor * 220;
+        actionDialog.maximumHeight = screenScaleFactor * 300;
     }
 
     Column {
@@ -54,7 +54,17 @@ Cura.MachineAction
             color: "red";
         }
 
-        Item { width: parent.width; }
+        Item { width: parent.width;  height: 10; }
+        Label { text: catalog.i18nc("@label", "API-Key (Optional - if the network is untrusted)"); }
+        TextField {
+            id: api_keyField;
+            text: manager.printerSettingAPIKey;
+            maximumLength: 1024;
+            anchors.left: parent.left;
+            anchors.right: parent.right;
+        }
+
+        Item { width: parent.width; height: 10; }
         Label { text: catalog.i18nc("@label", "Username (HTTP Basic Auth)"); }
         TextField {
             id: http_userField;
@@ -64,7 +74,7 @@ Cura.MachineAction
             anchors.right: parent.right;
         }
 
-        Item { width: parent.width; }
+        Item { width: parent.width;  height: 10; }
         Label { text: catalog.i18nc("@label", "Password (HTTP Basic Auth)"); }
         TextField {
             id: http_passwordField;
@@ -74,7 +84,7 @@ Cura.MachineAction
             anchors.right: parent.right;
         }
 
-        Item { width: parent.width; }
+        Item { width: parent.width;  height: 10; }
         Label { text: catalog.i18nc("@label", "Output Format"); }
         RowLayout {
             id: outputFormat;
@@ -104,7 +114,7 @@ Cura.MachineAction
                 text: catalog.i18nc("@action:button", "Save Config");
                 width: screenScaleFactor * 100;
                 onClicked: {
-                    manager.saveConfig(urlField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked);
+                    manager.saveConfig(urlField.text, api_keyField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked);
                     actionDialog.reject();
                 }
                 enabled: base.validUrl;
