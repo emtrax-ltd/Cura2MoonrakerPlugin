@@ -91,7 +91,11 @@ class MoonrakerOutputDevice(OutputDevice):
 
         # Prepare filename for upload
         if fileName:
-            fileName = os.path.splitext(fileName)[0] + '.' + self._output_format
+            # check if fileName has a path or just contains a filename
+            if "/" in fileName or "\\" in fileName: 
+                fileName = os.path.splitext(fileName)[0].replace(" ", "_").replace(".", "-") + '.' + self._output_format
+            else:
+                fileName = fileName.replace(" ", "_").replace(".", "-") + '.' + self._output_format
         else:
             fileName = "%s." + self._output_format % Application.getInstance().getPrintInformation().jobName
         self._fileName = fileName
