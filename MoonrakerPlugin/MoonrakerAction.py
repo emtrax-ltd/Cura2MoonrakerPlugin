@@ -33,6 +33,9 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
         self.printerOutputFormatChanged.emit()
+        self.printerTransInputChanged.emit()
+        self.printerTransOutputChanged.emit()
+        self.printerTransRemoveChanged.emit()
 
     def _onContainerAdded(self, container: "ContainerInterface") -> None:
         # Add this action as a supported action to all machine definitions
@@ -48,12 +51,18 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
         self.printerOutputFormatChanged.emit()
+        self.printerTransInputChanged.emit()
+        self.printerTransOutputChanged.emit()
+        self.printerTransRemoveChanged.emit()
 
     printerSettingsUrlChanged = pyqtSignal()
     printerSettingsAPIKeyChanged = pyqtSignal()
     printerSettingsHTTPUserChanged = pyqtSignal()
     printerSettingsHTTPPasswordChanged = pyqtSignal()
     printerOutputFormatChanged = pyqtSignal()
+    printerTransInputChanged = pyqtSignal()
+    printerTransOutputChanged = pyqtSignal()
+    printerTransRemoveChanged = pyqtSignal()
 
     @pyqtProperty(str, notify = printerSettingsUrlChanged)
     def printerSettingUrl(self) -> Optional[str]:
@@ -90,12 +99,33 @@ class MoonrakerAction(MachineAction):
             return s.get("output_format", "gcode")
         return "gcode"
 
-    @pyqtSlot(str, str, str, str, bool)
-    def saveConfig(self, url, api_key, http_user, http_password, output_format_ufp):
+    @pyqtProperty(str, notify = printerTransInputChanged)
+    def printerTransInput(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("trans_input", "")
+        return ""
+
+    @pyqtProperty(str, notify = printerTransOutputChanged)
+    def printerTransOutput(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("trans_output", "")
+        return ""
+
+    @pyqtProperty(str, notify = printerTransRemoveChanged)
+    def printerTransRemove(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("trans_remove", "")
+        return ""
+
+    @pyqtSlot(str, str, str, str, bool, str, str, str)
+    def saveConfig(self, url, api_key, http_user, http_password, output_format_ufp, trans_input, trans_output, trans_remove):
         if not url.endswith('/'):
             url += '/'
 
-        save_config(url, api_key, http_user, http_password, "ufp" if output_format_ufp == True else "gcode")
+        save_config(url, api_key, http_user, http_password, "ufp" if output_format_ufp == True else "gcode", trans_input, trans_output, trans_remove)
         Logger.log("d", "config saved")
 
         # trigger a stack change to reload the output devices
@@ -121,6 +151,13 @@ class MoonrakerAction(MachineAction):
             return False
         if '@' in newUrl:
             # @ is probably HTTP basic auth, which is a separate setting
+            return False
+
+        return True
+
+    @pyqtSlot(str, str, result = bool)
+    def validTrans(self, newTransInput, newTransOutput):
+        if len(newTransInput) != len(newTransOutput):
             return False
 
         return True

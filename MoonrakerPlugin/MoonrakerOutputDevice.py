@@ -51,11 +51,13 @@ class MoonrakerOutputDevice(OutputDevice):
         self._output_format = config.get("output_format", "gcode")
         if self._output_format and self._output_format != "ufp":
             self._output_format = "gcode"
+        self._trans_input = config.get("trans_input", "")
+        self._trans_output = config.get("trans_output", "")
+        self._trans_remove = config.get("trans_remove", "")
 
         self.application = CuraApplication.getInstance()
         global_container_stack = self.application.getGlobalContainerStack()
         self._name = global_container_stack.getName()
-
 
         description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
         self.setShortDescription(description)
@@ -91,10 +93,16 @@ class MoonrakerOutputDevice(OutputDevice):
 
         # Prepare filename for upload
         if fileName:
-            fileName = os.path.splitext(fileName)[0] + '.' + self._output_format
+            fileName = os.path.basename(fileName);
         else:
-            fileName = "%s." + self._output_format % Application.getInstance().getPrintInformation().jobName
-        self._fileName = fileName
+            fileName = "%s." % Application.getInstance().getPrintInformation().jobName
+        
+        # Translate filename
+        if self._trans_input and self._trans_output:
+            transFileName = fileName.translate(fileName.maketrans(self._trans_input, self._trans_output, self._trans_remove if self._trans_remove else ""))
+            fileName = transFileName
+
+        self._fileName = fileName  + "." + self._output_format
 
         # Display upload dialog
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'MoonrakerUpload.qml')

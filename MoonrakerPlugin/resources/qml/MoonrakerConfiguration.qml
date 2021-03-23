@@ -23,6 +23,7 @@ Cura.MachineAction
     property var selectedInstance: null
 
     property bool validUrl: true;
+    property bool validTrans: true;
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 500;
@@ -103,6 +104,49 @@ Cura.MachineAction
             }
         }
 
+        Item { width: parent.width;  height: 10; }
+        RowLayout {
+            Label { text: catalog.i18nc("@label", "Filename Translation "); }
+            Label { text: "filename.translate(filename.maketrans(input[], output[], remove[])"; font.italic: true }
+        }
+        RowLayout {
+            Label { text: catalog.i18nc("@label", "Input:"); }
+            TextField {
+                id: transInputField;
+                text: manager.printerTransInput;
+                width: 60;
+                maximumLength: 128;
+                onTextChanged: {
+                    base.validTrans = manager.validTrans(transInputField.text, transOutputField.text);
+                }
+            }
+
+            Label { text: catalog.i18nc("@label", "Output:"); }
+            TextField {
+                id: transOutputField;
+                text: manager.printerTransOutput;
+                width: 60;
+                maximumLength: 128;
+                onTextChanged: {
+                    base.validTrans = manager.validTrans(transInputField.text, transOutputField.text);
+                }
+            }
+
+            Label { text: catalog.i18nc("@label", "Remove:"); }
+            TextField {
+                id: transRemoveField;
+                text: manager.printerTransRemove;
+                width: 60;
+                maximumLength: 128;
+            }
+        }
+        Item { width: parent.width; }
+        Label {
+            visible: !base.validTrans;
+            text: catalog.i18nc("@error", "Number of mapping characters in the input must be equal to the output!");
+            color: "red";
+        }
+
         Item {
             width: saveButton.implicitWidth;
             height: saveButton.implicitHeight;
@@ -114,10 +158,10 @@ Cura.MachineAction
                 text: catalog.i18nc("@action:button", "Save Config");
                 width: screenScaleFactor * 100;
                 onClicked: {
-                    manager.saveConfig(urlField.text, api_keyField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked);
+                    manager.saveConfig(urlField.text, api_keyField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked, transInputField.text, transOutputField.text, transRemoveField.text);
                     actionDialog.reject();
                 }
-                enabled: base.validUrl;
+                enabled: base.validUrl & base.validTrans;
             }
 
             Button {
