@@ -26,10 +26,10 @@ Cura.MachineAction
     property bool validTrans: true;
 
     Component.onCompleted: {
-        actionDialog.minimumWidth = screenScaleFactor * 500;
-        actionDialog.minimumHeight = screenScaleFactor * 320;
-        actionDialog.maximumWidth = screenScaleFactor * 500;
-        actionDialog.maximumHeight = screenScaleFactor * 320;
+        actionDialog.minimumWidth = screenScaleFactor * 580;
+        actionDialog.minimumHeight = screenScaleFactor * 370;
+        actionDialog.maximumWidth = screenScaleFactor * 580;
+        actionDialog.maximumHeight = screenScaleFactor * 370;
     }
 
     Column {
