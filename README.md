@@ -26,6 +26,16 @@ To configure your Moonraker 3D printer...
 1. Open your STL model in Cura and click `Slice`.
 2. Click the small up arrow on the right and select `Upload to <Your Printername>`:
 3. Now you can modify the filename, select the option to create a print job and finally... click `Upload` :)
+  
+## How to "Filename Translation"
+This is a requested feature to replace/remove special chracters within the suggested filename (by Cura) before uploading it to moonraker. The working principle is relativly simple: replacement by mapping characters 1:1 from "input" into "output" and removement by putting the unwanted characters into "remove".
+
+Example:
+  - input: " ."  <- first character is a whitespace
+  - output: "_-"
+  - remove: "()"
+
+  "Simple Test v1.0 (ABS)" results into "Simple_Test_v1-0_ABS"
 
 ----
 
