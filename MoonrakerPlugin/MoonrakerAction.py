@@ -2,8 +2,9 @@ import os
 import json
 import re
 from typing import Dict, Type, TYPE_CHECKING, List, Optional, cast
+from typing_extensions import ParamSpecKwargs
 
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtProperty, pyqtSignal
+from PyQt5.QtCore import QObject, QVariant, pyqtSlot, pyqtProperty, pyqtSignal
 
 from cura.CuraApplication import CuraApplication
 from cura.MachineAction import MachineAction
@@ -32,6 +33,7 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsAPIKeyChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerSettingsPowerDeviceChanged.emit()
         self.printerOutputFormatChanged.emit()
         self.printerTransInputChanged.emit()
         self.printerTransOutputChanged.emit()
@@ -50,6 +52,7 @@ class MoonrakerAction(MachineAction):
         self.printerSettingsAPIKeyChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerSettingsPowerDeviceChanged.emit()
         self.printerOutputFormatChanged.emit()
         self.printerTransInputChanged.emit()
         self.printerTransOutputChanged.emit()
@@ -59,6 +62,7 @@ class MoonrakerAction(MachineAction):
     printerSettingsAPIKeyChanged = pyqtSignal()
     printerSettingsHTTPUserChanged = pyqtSignal()
     printerSettingsHTTPPasswordChanged = pyqtSignal()
+    printerSettingsPowerDeviceChanged = pyqtSignal()
     printerOutputFormatChanged = pyqtSignal()
     printerTransInputChanged = pyqtSignal()
     printerTransOutputChanged = pyqtSignal()
@@ -92,6 +96,13 @@ class MoonrakerAction(MachineAction):
             return s.get("http_password", "")
         return ""
 
+    @pyqtProperty(str, notify = printerSettingsPowerDeviceChanged)
+    def printerSettingPowerDevice(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s.get("power_device", "")
+        return ""
+
     @pyqtProperty(str, notify = printerOutputFormatChanged)
     def printerOutputFormat(self) -> Optional[str]:
         s = get_config()
@@ -120,12 +131,17 @@ class MoonrakerAction(MachineAction):
             return s.get("trans_remove", "")
         return ""
 
-    @pyqtSlot(str, str, str, str, bool, str, str, str)
-    def saveConfig(self, url, api_key, http_user, http_password, output_format_ufp, trans_input, trans_output, trans_remove):
-        if not url.endswith('/'):
-            url += '/'
+    @pyqtSlot(QVariant)
+    def saveConfig(self, paramsQJSValObj):
+        params = paramsQJSValObj.toVariant()
 
-        save_config(url, api_key, http_user, http_password, "ufp" if output_format_ufp == True else "gcode", trans_input, trans_output, trans_remove)
+        if not params['url'].endswith('/'):
+            params['url'] += '/'
+
+        conf = params
+        conf['output_format_ufp'] = "ufp" if params['output_format_ufp'] == True else "gcode"
+        save_config(conf)
+
         Logger.log("d", "config saved")
 
         # trigger a stack change to reload the output devices

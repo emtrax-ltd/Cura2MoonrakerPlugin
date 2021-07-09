@@ -85,6 +85,16 @@ Cura.MachineAction
             anchors.right: parent.right;
         }
 
+        Item { width: parent.width; height: 10; }
+        Label { text: catalog.i18nc("@label", "Name of Moonraker Power Device in moonraker.conf"); }
+        TextField {
+            id: power_deviceField;
+            text: manager.printerSettingPowerDevice;
+            maximumLength: 1024;
+            anchors.left: parent.left;
+            anchors.right: parent.right;
+        }
+
         Item { width: parent.width;  height: 10; }
         Label { text: catalog.i18nc("@label", "Output Format"); }
         RowLayout {
@@ -158,7 +168,17 @@ Cura.MachineAction
                 text: catalog.i18nc("@action:button", "Save Config");
                 width: screenScaleFactor * 100;
                 onClicked: {
-                    manager.saveConfig(urlField.text, api_keyField.text, http_userField.text, http_passwordField.text, outputFormatUfp.checked, transInputField.text, transOutputField.text, transRemoveField.text);
+                    manager.saveConfig({
+                        'url': urlField.text,
+                        'api_key': api_keyField.text,
+                        'http_user': http_userField.text,
+                        'http_password': http_passwordField.text,
+                        'power_device': power_deviceField.text,
+                        'output_format_ufp': outputFormatUfp.checked,
+                        'trans_input': transInputField.text,
+                        'trans_output': transOutputField.text,
+                        'trans_remove': transRemoveField.text
+                    });
                     actionDialog.reject();
                 }
                 enabled: base.validUrl & base.validTrans;

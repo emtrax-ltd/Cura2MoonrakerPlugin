@@ -25,18 +25,9 @@ def get_config():
         return s[printer_id]
     return {}
 
-def save_config(url, api_key, http_user, http_password, output_format, trans_input, trans_output, trans_remove):
+def save_config(conf):
     s, printer_id = _load_prefs()
-    s[printer_id] = {
-            "url": url,
-            "api_key": api_key,
-            "http_user": http_user,
-            "http_password": http_password,
-            "output_format": output_format,
-            "trans_input": trans_input,
-            "trans_output": trans_output,
-            "trans_remove": trans_remove
-        }
+    s[printer_id] = conf
     application = CuraApplication.getInstance()
     p = application.getPreferences()
     p.setValue(MOONRAKER_SETTINGS, json.dumps(s))

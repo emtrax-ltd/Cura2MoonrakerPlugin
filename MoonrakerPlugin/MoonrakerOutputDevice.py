@@ -1,5 +1,6 @@
 import base64
 import json
+from os import POSIX_FADV_SEQUENTIAL
 import os.path
 import urllib
 from enum import Enum
@@ -48,6 +49,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._api_key = config.get("api_key", "")
         self._http_user = config.get("http_user", "")
         self._http_password = config.get("http_password", "")
+        self._power_device = config.get("power_device", "")
         self._output_format = config.get("output_format", "gcode")
         if self._output_format and self._output_format != "ufp":
             self._output_format = "gcode"
@@ -66,6 +68,8 @@ class MoonrakerOutputDevice(OutputDevice):
         self._stage = OutputStage.ready
         self._stream = None
         self._message = None
+
+        self._offline_cnt = 0
 
         Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {} | HTTP Basic Auth: user:{}, password:{}".format(self._name_id, self._url, self._api_key, self._http_user if self._http_user else "<empty>", "set" if self._http_password else "<empty>",))
         self._resetState()
@@ -149,7 +153,37 @@ class MoonrakerOutputDevice(OutputDevice):
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
         self._message.show()
         Logger.log("d", "Connecting to Moonraker...")
-        self._sendRequest('printer/info', on_success = self.onInstanceOnline)
+
+        Logger.log("d", "Checking if Moonraker Power Device is configured...")
+        if self._power_device:
+            self.printerDevicePowerOn()
+        else:
+            self.getPrinterInfo()
+
+    def handlePrinterOffline(self, reply, error):
+        self._offline_cnt += 1
+        if self._offline_cnt > 20:
+            messageText = "Connection to printer timed out"
+            if self._power_device:
+                messageText += " with power device '{}'.".format(self._power_device)
+            else:
+                messageText += "."
+            messageText += " Check your Moonraker and Klipper settings."
+            
+            self._message = Message(catalog.i18nc("@info:status", messageText), 0, False)
+            self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
+            self._message.actionTriggered.connect(self._onMessageActionTriggered)
+            self._message.show()
+        
+            self.writeError.emit(self)
+            self._resetState()
+        else:
+            from time import sleep
+            sleep(0.5)
+            self.getPrinterInfo()
+
+    def getPrinterInfo(self, reply=None):
+        self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterOffline)
 
     def onInstanceOnline(self, reply):
         if self._stage != OutputStage.writing:
@@ -167,6 +201,28 @@ class MoonrakerOutputDevice(OutputDevice):
             self._postData.append(self._stream.getvalue().encode())
         self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onCodeUploaded)
 
+    def printerDevicePowerOn(self):
+        Logger.log("d", "Turning on Moonraker power device " + self._power_device)
+        
+        path = '/machine/device_power/device'
+        url = self._url + path
+
+        headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive', 'Content-Type': 'application/json'}
+
+        if self._api_key:
+            headers['X-API-Key'] = self._api_key
+
+        if self._http_user and self._http_password:
+            auth = "{}:{}".format(self._http_user, self._http_password).encode()
+            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
+
+        postData = json.dumps({
+            "device": self._power_device,
+            "action": "on"
+        }).encode()
+
+        self.application.getHttpRequestManager().post(url, headers, postData, callback = self.getPrinterInfo, error_callback = self._onNetworkError, upload_progress_callback = self._onUploadProgress)
+    
     def onCodeUploaded(self, reply):
         if self._stage != OutputStage.writing:
             return
@@ -209,6 +265,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._fileName = None
         self._startPrint = None
         self._postData = None
+        self._offline_cnt = 0
 
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
@@ -247,7 +304,7 @@ class MoonrakerOutputDevice(OutputDevice):
 
         if self._http_user and self._http_password:
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
-            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8");
+            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
 
         if data:
             # Create multi_part request           
@@ -270,7 +327,7 @@ class MoonrakerOutputDevice(OutputDevice):
                 part_print.setBody(b"true")
                 parts.append(part_print)
 
-            headers['Content-Type'] = 'multipart/form-data; boundary='+ str(parts.boundary().data(), encoding = 'utf-8');
+            headers['Content-Type'] = 'multipart/form-data; boundary='+ str(parts.boundary().data(), encoding = 'utf-8')
 
             self.application.getHttpRequestManager().post(url, headers, parts, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress)
         else:
