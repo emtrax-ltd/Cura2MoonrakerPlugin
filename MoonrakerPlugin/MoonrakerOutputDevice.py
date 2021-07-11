@@ -6,6 +6,7 @@ import urllib
 from enum import Enum
 from io import BytesIO, StringIO
 from typing import cast
+from time import sleep
 
 from cura.CuraApplication import CuraApplication
 
@@ -69,7 +70,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._stream = None
         self._message = None
 
-        self._offline_cnt = 0
+        self._timeout_cnt = 0
 
         Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {} | HTTP Basic Auth: user:{}, password:{}".format(self._name_id, self._url, self._api_key, self._http_user if self._http_user else "<empty>", "set" if self._http_password else "<empty>",))
         self._resetState()
@@ -97,7 +98,7 @@ class MoonrakerOutputDevice(OutputDevice):
 
         # Prepare filename for upload
         if fileName:
-            fileName = os.path.basename(fileName);
+            fileName = os.path.basename(fileName)
         else:
             fileName = "%s." % Application.getInstance().getPrintInformation().jobName
         
@@ -147,62 +148,23 @@ class MoonrakerOutputDevice(OutputDevice):
         Logger.log("d", "Print set to: " + str(self._startPrint))
 
         self._dialog.deleteLater()
-        self._stage = OutputStage.writing
-
-        # show a progress message
-        self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
+        
+        Logger.log("d", "Connecting to Moonraker at {} ...".format(self._url))
+        # show a status message with spinner
+        messageText = self._getConnectMsgText()
+        self._message = Message(catalog.i18nc("@info:status", messageText), 0, False)
         self._message.show()
-        Logger.log("d", "Connecting to Moonraker...")
 
-        Logger.log("d", "Checking if Moonraker Power Device is configured...")
         if self._power_device:
             self.printerDevicePowerOn()
         else:
             self.getPrinterInfo()
-
-    def handlePrinterOffline(self, reply, error):
-        self._offline_cnt += 1
-        if self._offline_cnt > 20:
-            messageText = "Connection to printer timed out"
-            if self._power_device:
-                messageText += " with power device '{}'.".format(self._power_device)
-            else:
-                messageText += "."
-            messageText += " Check your Moonraker and Klipper settings."
-            
-            self._message = Message(catalog.i18nc("@info:status", messageText), 0, False)
-            self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
-            self._message.actionTriggered.connect(self._onMessageActionTriggered)
-            self._message.show()
-        
-            self.writeError.emit(self)
-            self._resetState()
-        else:
-            from time import sleep
-            sleep(0.5)
-            self.getPrinterInfo()
-
+    
     def getPrinterInfo(self, reply=None):
-        self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterOffline)
-
-    def onInstanceOnline(self, reply):
-        if self._stage != OutputStage.writing:
-            return
-        if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", "Stopping due to reply error: " + reply.error())
-            return
-
-        Logger.log("d", "Uploading " + self._output_format + "...")
-        self._stream.seek(0)
-        self._postData = QByteArray()
-        if isinstance(self._stream, BytesIO):
-            self._postData.append(self._stream.getvalue())
-        else:
-            self._postData.append(self._stream.getvalue().encode())
-        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onCodeUploaded)
+        self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterConnection)
 
     def printerDevicePowerOn(self):
-        Logger.log("d", "Turning on Moonraker power device " + self._power_device)
+        Logger.log("d", "Turning on Moonraker power device [power {}]" + self._power_device)
         
         path = '/machine/device_power/device'
         url = self._url + path
@@ -221,7 +183,58 @@ class MoonrakerOutputDevice(OutputDevice):
             "action": "on"
         }).encode()
 
-        self.application.getHttpRequestManager().post(url, headers, postData, callback = self.getPrinterInfo, error_callback = self._onNetworkError, upload_progress_callback = self._onUploadProgress)
+        self.application.getHttpRequestManager().post(url, headers, postData, callback = self.getPrinterInfo, error_callback = self._onNetworkError)
+
+    def handlePrinterConnection(self, reply, error):
+        self._timeout_cnt += 1
+        timeout_cnt_max = 20
+        
+        if self._timeout_cnt > timeout_cnt_max:
+            messageText = "Error: Connection to Moonraker at {} timed out".format(self._url)
+            if self._power_device:
+                messageText += ". \nCheck [power {}] stanza in moonraker.conf".format(self._power_device)
+            messageText += "."
+            self._message.setLifetimeTimer(0)
+            self._message.setText(messageText)
+                
+            browseMessageText = "Check your Moonraker and Klipper settings."
+            self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
+            self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
+            self._message.actionTriggered.connect(self._onMessageActionTriggered)
+            self._message.show()
+        
+            self.writeError.emit(self)
+            self._resetState()
+        else:
+            sleep(0.5)
+            self._message.setText(self._getConnectMsgText())
+            self.getPrinterInfo()
+
+    def onInstanceOnline(self, reply):
+        # remove connection timeout message
+        self._timeout_cnt
+        self._message.hide()
+        self._message = None
+
+        self._stage = OutputStage.writing
+        # show a progress message
+        self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
+        self._message.show()
+
+        if self._stage != OutputStage.writing: # always True?
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
+            return
+
+        Logger.log("d", "Uploading " + self._output_format + "...")
+        self._stream.seek(0)
+        self._postData = QByteArray()
+        if isinstance(self._stream, BytesIO):
+            self._postData.append(self._stream.getvalue())
+        else:
+            self._postData.append(self._stream.getvalue().encode())
+        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onCodeUploaded)    
     
     def onCodeUploaded(self, reply):
         if self._stage != OutputStage.writing:
@@ -256,6 +269,10 @@ class MoonrakerOutputDevice(OutputDevice):
             self._message.setProgress(progress)
         self.writeProgress.emit(self, progress)
 
+    def _getConnectMsgText(self):
+        spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        return "Connecting to Moonraker at {}     {}".format(self._url, spinner[self._timeout_cnt % len(spinner)])
+
     def _resetState(self):
         Logger.log("d", "Reset state")
         if self._stream:
@@ -265,7 +282,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._fileName = None
         self._startPrint = None
         self._postData = None
-        self._offline_cnt = 0
+        self._timeout_cnt = 0
 
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
@@ -300,7 +317,7 @@ class MoonrakerOutputDevice(OutputDevice):
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
 
         if self._api_key:
-            headers['X-API-Key'] = self._api_key;
+            headers['X-API-Key'] = self._api_key
 
         if self._http_user and self._http_password:
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
