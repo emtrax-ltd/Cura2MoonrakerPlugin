@@ -1,6 +1,5 @@
 import base64
 import json
-from os import POSIX_FADV_SEQUENTIAL
 import os.path
 import urllib
 from enum import Enum
