@@ -139,7 +139,8 @@ class MoonrakerAction(MachineAction):
             params['url'] += '/'
 
         conf = params
-        conf['output_format_ufp'] = "ufp" if params['output_format_ufp'] == True else "gcode"
+        conf['output_format'] = "ufp" if params['output_format_ufp'] == True else "gcode"
+        del conf['output_format_ufp']
         save_config(conf)
 
         Logger.log("d", "config saved")
