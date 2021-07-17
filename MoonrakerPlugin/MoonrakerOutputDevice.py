@@ -155,12 +155,11 @@ class MoonrakerOutputDevice(OutputDevice):
         self._message.show()
 
         if self._power_device:
-            self.printerDevicePowerOn()
+            self.printerFirmwareRestart()
         else:
             self.getPrinterInfo()
     
     def getPrinterInfo(self, reply=None):
-        # self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterConnection)
         self._sendRequest('printer/objects/query?webhooks', on_success = self.checkPrinterState, on_error = self.handlePrinterConnection)
 
     def checkPrinterState(self, reply=None):
@@ -180,12 +179,7 @@ class MoonrakerOutputDevice(OutputDevice):
             else:
                 self.handlePrinterConnection(reply, None)
 
-    def printerDevicePowerOn(self):
-        Logger.log("d", "Turning on Moonraker power device [power {}]" + self._power_device)
-        
-        path = '/machine/device_power/device'
-        url = self._url + path
-
+    def simplePost(self, url, postData, postCallback, postErrorCallback):
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive', 'Content-Type': 'application/json'}
 
         if self._api_key:
@@ -195,12 +189,30 @@ class MoonrakerOutputDevice(OutputDevice):
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
             headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
 
+        self.application.getHttpRequestManager().post(url, headers, postData, callback = postCallback, error_callback = postErrorCallback)
+
+    def printerFirmwareRestart(self):
+        Logger.log("d", "Sending FIRMWARE_RESTART command to %s" % self._url)
+
+        path = '/printer/firmware_restart'
+        url = self._url + path
+
+        postData = json.dumps({}).encode()
+
+        self.simplePost(url, postData, self.printerDevicePowerOn, self._onNetworkError)
+
+    def printerDevicePowerOn(self, reply):
+        Logger.log("d", "Turning on Moonraker power device [power {}]" + self._power_device)
+        
+        path = '/machine/device_power/device'
+        url = self._url + path
+
         postData = json.dumps({
             "device": self._power_device,
             "action": "on"
         }).encode()
 
-        self.application.getHttpRequestManager().post(url, headers, postData, callback = self.getPrinterInfo, error_callback = self._onNetworkError)
+        self.simplePost(url, postData, self.getPrinterInfo, self._onNetworkError)
 
     def handlePrinterConnection(self, reply, error):
         self._timeout_cnt += 1
