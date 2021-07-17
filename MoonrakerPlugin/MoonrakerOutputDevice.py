@@ -160,7 +160,25 @@ class MoonrakerOutputDevice(OutputDevice):
             self.getPrinterInfo()
     
     def getPrinterInfo(self, reply=None):
-        self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterConnection)
+        # self._sendRequest('printer/info', on_success = self.onInstanceOnline, on_error = self.handlePrinterConnection)
+        self._sendRequest('printer/objects/query?webhooks', on_success = self.checkPrinterState, on_error = self.handlePrinterConnection)
+
+    def checkPrinterState(self, reply=None):
+        if reply:
+            byte_string = reply.readAll()
+            data = ''
+            try:
+                data = json.loads(str(byte_string, 'utf-8'))
+            except json.JSONDecodeError:
+                Logger.log("d", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
+                self.handlePrinterConnection(reply, None)
+            
+            # Logger.log("d", "checkPrinterState reply: %s" % str(byte_string, 'utf-8'))
+            
+            if data['result']['status']['webhooks']['state'] == 'ready':
+                self.onInstanceOnline(reply)
+            else:
+                self.handlePrinterConnection(reply, None)
 
     def printerDevicePowerOn(self):
         Logger.log("d", "Turning on Moonraker power device [power {}]" + self._power_device)
