@@ -155,89 +155,83 @@ class MoonrakerOutputDevice(OutputDevice):
         self._message.show()
 
         if self._power_device:
-            self.printerFirmwareRestart()
+            self.getPrinterDeviceStatus()
         else:
             self.getPrinterInfo()
     
-    def getPrinterInfo(self, reply=None):
-        self._sendRequest('printer/objects/query?webhooks', on_success = self.checkPrinterState, on_error = self.handlePrinterConnection)
-
     def checkPrinterState(self, reply=None):
         if reply:
-            byte_string = reply.readAll()
-            data = ''
-            try:
-                data = json.loads(str(byte_string, 'utf-8'))
-            except json.JSONDecodeError:
-                Logger.log("d", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
-                self.handlePrinterConnection(reply, None)
-            
-            # Logger.log("d", "checkPrinterState reply: %s" % str(byte_string, 'utf-8'))
-            
-            if data['result']['status']['webhooks']['state'] == 'ready':
+            res = self._verifyReply(reply)
+            state = res['result']['state']
+
+            if state == 'ready':
+                # printer is online
                 self.onInstanceOnline(reply)
+            elif state == 'error':
+                self.onCheckStatusError(msg=res['result']['state_message'])
             else:
-                self.handlePrinterConnection(reply, None)
+                self.handlePrinterConnection()
 
-    def simplePost(self, url, postData, postCallback, postErrorCallback):
-        headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive', 'Content-Type': 'application/json'}
+    def checkPrinterDeviceStatus(self, reply):
+        if reply:
+            res = self._verifyReply(reply)
+            power_status = res['result'][self._power_device]
+            log_msg = "Power device [power {}] status == '{}'".format(self._power_device, power_status)
 
-        if self._api_key:
-            headers['X-API-Key'] = self._api_key
+            if power_status == 'on':
+                log_msg += " Calling getPrinterInfo()"
+                Logger.log("d", log_msg)
+                self.getPrinterInfo()
+            elif power_status == 'off':
+                log_msg += " Calling postPrinterDevicePowerOn()"
+                Logger.log("d", log_msg)
+                self.postPrinterDevicePowerOn()
 
-        if self._http_user and self._http_password:
-            auth = "{}:{}".format(self._http_user, self._http_password).encode()
-            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
+    def getPrinterDeviceStatus(self):
+        Logger.log("d", "Checking printer device [power {}] status".format(self._power_device))
+        self._sendRequest('machine/device_power/device?device={}'.format(self._power_device), on_success = self.checkPrinterDeviceStatus)
 
-        self.application.getHttpRequestManager().post(url, headers, postData, callback = postCallback, error_callback = postErrorCallback)
-
-    def printerFirmwareRestart(self):
-        Logger.log("d", "Sending FIRMWARE_RESTART command to %s" % self._url)
-
-        path = '/printer/firmware_restart'
-        url = self._url + path
-
-        postData = json.dumps({}).encode()
-
-        self.simplePost(url, postData, self.printerDevicePowerOn, self._onNetworkError)
-
-    def printerDevicePowerOn(self, reply):
-        Logger.log("d", "Turning on Moonraker power device [power {}]" + self._power_device)
+    def postPrinterDevicePowerOn(self, reply=None):
+        Logger.log("d", "Turning on Moonraker power device [power {}]".format(self._power_device))
         
-        path = '/machine/device_power/device'
-        url = self._url + path
-
-        postData = json.dumps({
+        postJSON = json.dumps({
             "device": self._power_device,
             "action": "on"
         }).encode()
 
-        self.simplePost(url, postData, self.getPrinterInfo, self._onNetworkError)
+        self._sendRequest('machine/device_power/device', data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
 
-    def handlePrinterConnection(self, reply, error):
+    def onMoonrakerConnectionTimeoutError(self):
+        messageText = "Error: Connection to Moonraker at {} timed out.".format(self._url)
+        self._message.setLifetimeTimer(0)
+        self._message.setText(messageText)
+            
+        browseMessageText = "Check your Moonraker and Klipper settings."
+        browseMessageText += "\nA FIRMWARE_RESTART may be necessary."
+        if self._power_device:
+            browseMessageText += "\n\nAlso check [power {}] stanza in moonraker.conf".format(self._power_device)
+
+        self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
+        self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
+        self._message.actionTriggered.connect(self._onMessageActionTriggered)
+        self._message.show()
+    
+        self.writeError.emit(self)
+        self._resetState()
+
+    def handlePrinterConnection(self, reply=None, error=None):
         self._timeout_cnt += 1
         timeout_cnt_max = 20
         
         if self._timeout_cnt > timeout_cnt_max:
-            messageText = "Error: Connection to Moonraker at {} timed out".format(self._url)
-            if self._power_device:
-                messageText += ". \nCheck [power {}] stanza in moonraker.conf".format(self._power_device)
-            messageText += "."
-            self._message.setLifetimeTimer(0)
-            self._message.setText(messageText)
-                
-            browseMessageText = "Check your Moonraker and Klipper settings."
-            self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
-            self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
-            self._message.actionTriggered.connect(self._onMessageActionTriggered)
-            self._message.show()
-        
-            self.writeError.emit(self)
-            self._resetState()
+            self.onMoonrakerConnectionTimeoutError()
         else:
             sleep(0.5)
             self._message.setText(self._getConnectMsgText())
             self.getPrinterInfo()
+
+    def getPrinterInfo(self, reply=None):
+        self._sendRequest('printer/info', on_success = self.checkPrinterState, on_error = self.handlePrinterConnection)
 
     def onInstanceOnline(self, reply):
         # remove connection timeout message
@@ -339,8 +333,21 @@ class MoonrakerOutputDevice(OutputDevice):
 
         self.writeError.emit(self)
         self._resetState()
+    
+    def _verifyReply(self, reply):
+        # Logger.log("d", "reply: %s" % str(byte_string, 'utf-8'))
 
-    def _sendRequest(self, path, name = None, data = None, on_success = None, on_error = None):
+        byte_string = reply.readAll()
+        response = ''
+        try:
+            response = json.loads(str(byte_string, 'utf-8'))
+        except json.JSONDecodeError:
+            Logger.log("d", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
+            self.handlePrinterConnection()
+
+        return response
+
+    def _sendRequest(self, path, name = None, data = None, dataIsJSON = False, on_success = None, on_error = None):
         url = self._url + path
 
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
@@ -352,29 +359,37 @@ class MoonrakerOutputDevice(OutputDevice):
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
             headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
 
-        if data:
-            # Create multi_part request           
-            parts = QHttpMultiPart(QHttpMultiPart.FormDataType)
+        postData = data
+        if data is not None:
+            if not dataIsJSON:
+                # Create multi_part request           
+                parts = QHttpMultiPart(QHttpMultiPart.FormDataType)
 
-            part_file = QHttpPart()
-            part_file.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
-            part_file.setHeader(QNetworkRequest.ContentTypeHeader, QVariant('application/octet-stream'))
-            part_file.setBody(data)
-            parts.append(part_file)
+                part_file = QHttpPart()
+                part_file.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
+                part_file.setHeader(QNetworkRequest.ContentTypeHeader, QVariant('application/octet-stream'))
+                part_file.setBody(data)
+                parts.append(part_file)
 
-            part_root = QHttpPart()
-            part_root.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="root"'))
-            part_root.setBody(b"gcodes")
-            parts.append(part_root)
+                part_root = QHttpPart()
+                part_root.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="root"'))
+                part_root.setBody(b"gcodes")
+                parts.append(part_root)
 
-            if self._startPrint and self._startPrint == True:
-                part_print = QHttpPart()
-                part_print.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="print"'))
-                part_print.setBody(b"true")
-                parts.append(part_print)
+                if self._startPrint and self._startPrint == True:
+                    part_print = QHttpPart()
+                    part_print.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="print"'))
+                    part_print.setBody(b"true")
+                    parts.append(part_print)
 
-            headers['Content-Type'] = 'multipart/form-data; boundary='+ str(parts.boundary().data(), encoding = 'utf-8')
+                headers['Content-Type'] = 'multipart/form-data; boundary='+ str(parts.boundary().data(), encoding = 'utf-8')
 
-            self.application.getHttpRequestManager().post(url, headers, parts, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress)
+                postData = parts
+            else:
+                # postData is JSON
+                headers['Content-Type'] = 'application/json'
+
+            # self.application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress)
+            self.application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress if not dataIsJSON else None)
         else:
             self.application.getHttpRequestManager().get(url, headers, callback = on_success, error_callback = on_error if on_error else self._onNetworkError)
