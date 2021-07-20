@@ -164,28 +164,39 @@ class MoonrakerOutputDevice(OutputDevice):
             res = self._verifyReply(reply)
             state = res['result']['state']
 
-            if state == 'ready':
-                # printer is online
+            if self._startPrint:
+                if state == 'ready':
+                    # printer is online
+                    self.onInstanceOnline(reply)
+                else:
+                    self.handlePrinterConnection()
+            elif state != 'error':
+                # printer can queue job
                 self.onInstanceOnline(reply)
-            elif state == 'error':
-                self.onCheckStatusError(msg=res['result']['state_message'])
-            else:
+            else: # set counter to max before call?
                 self.handlePrinterConnection()
 
     def checkPrinterDeviceStatus(self, reply):
         if reply:
             res = self._verifyReply(reply)
             power_status = res['result'][self._power_device]
-            log_msg = "Power device [power {}] status == '{}'".format(self._power_device, power_status)
+            log_msg = "Power device [power {}] status == '{}';".format(self._power_device, power_status)
+            log_msg += " self._startPrint is {}".format(self._startPrint)
 
             if power_status == 'on':
                 log_msg += " Calling getPrinterInfo()"
                 Logger.log("d", log_msg)
                 self.getPrinterInfo()
             elif power_status == 'off':
-                log_msg += " Calling postPrinterDevicePowerOn()"
-                Logger.log("d", log_msg)
-                self.postPrinterDevicePowerOn()
+                if self._startPrint:
+                    log_msg += " Calling postPrinterDevicePowerOn()"
+                    Logger.log("d", log_msg)
+                    self.postPrinterDevicePowerOn()
+                else:
+                    log_msg += " Sending FIRMWARE_RESTART before calling getPrinterInfo()"
+                    Logger.log("d", log_msg)
+                    postData = json.dumps({}).encode()
+                    self._sendRequest('printer/firmware_restart', data = postData, dataIsJSON = True, on_success = self.getPrinterInfo)
 
     def getPrinterDeviceStatus(self):
         Logger.log("d", "Checking printer device [power {}] status".format(self._power_device))
@@ -209,7 +220,7 @@ class MoonrakerOutputDevice(OutputDevice):
         browseMessageText = "Check your Moonraker and Klipper settings."
         browseMessageText += "\nA FIRMWARE_RESTART may be necessary."
         if self._power_device:
-            browseMessageText += "\n\nAlso check [power {}] stanza in moonraker.conf".format(self._power_device)
+            browseMessageText += "\nAlso check [power {}] stanza in moonraker.conf".format(self._power_device)
 
         self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
@@ -244,8 +255,8 @@ class MoonrakerOutputDevice(OutputDevice):
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
         self._message.show()
 
-        if self._stage != OutputStage.writing: # always True?
-            return
+        if self._stage != OutputStage.writing:
+            return # never gets here now?
         if reply.error() != QNetworkReply.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
@@ -275,7 +286,10 @@ class MoonrakerOutputDevice(OutputDevice):
             self._message = None
 
         messageText = "Upload of '{}' to {} successfully completed"
-        if self._startPrint and self._startPrint == True:
+
+        # None evaluates to False
+        # see https://switowski.com/blog/checking-for-true-or-false
+        if self._startPrint:
            messageText += " and print job initialized."
         else:
            messageText += "."
@@ -376,7 +390,7 @@ class MoonrakerOutputDevice(OutputDevice):
                 part_root.setBody(b"gcodes")
                 parts.append(part_root)
 
-                if self._startPrint and self._startPrint == True:
+                if self._startPrint:
                     part_print = QHttpPart()
                     part_print.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="print"'))
                     part_print.setBody(b"true")
@@ -389,7 +403,6 @@ class MoonrakerOutputDevice(OutputDevice):
                 # postData is JSON
                 headers['Content-Type'] = 'application/json'
 
-            # self.application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress)
             self.application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress if not dataIsJSON else None)
         else:
             self.application.getHttpRequestManager().get(url, headers, callback = on_success, error_callback = on_error if on_error else self._onNetworkError)
