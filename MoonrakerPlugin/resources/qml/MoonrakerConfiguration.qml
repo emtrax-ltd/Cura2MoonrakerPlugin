@@ -27,9 +27,9 @@ Cura.MachineAction
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 580;
-        actionDialog.minimumHeight = screenScaleFactor * 370;
+        actionDialog.minimumHeight = screenScaleFactor * 410;
         actionDialog.maximumWidth = screenScaleFactor * 580;
-        actionDialog.maximumHeight = screenScaleFactor * 370;
+        actionDialog.maximumHeight = screenScaleFactor * 410;
     }
 
     Column {
