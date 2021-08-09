@@ -2,7 +2,6 @@ import os
 import json
 import re
 from typing import Dict, Type, TYPE_CHECKING, List, Optional, cast
-from typing_extensions import ParamSpecKwargs
 
 from PyQt5.QtCore import QObject, QVariant, pyqtSlot, pyqtProperty, pyqtSignal
 
