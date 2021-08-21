@@ -1,7 +1,7 @@
 import base64
 import json
 import os.path
-import urllib
+import urllib.parse
 from enum import Enum
 from io import BytesIO, StringIO
 from typing import cast
@@ -205,12 +205,11 @@ class MoonrakerOutputDevice(OutputDevice):
     def postPrinterDevicePowerOn(self, reply=None):
         Logger.log("d", "Turning on Moonraker power device [power {}]".format(self._power_device))
         
-        postJSON = json.dumps({
-            "device": self._power_device,
-            "action": "on"
-        }).encode()
+        postJSON = '{}'.encode()
+        params = {'device': self._power_device, 'action': 'on'}
+        req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
 
-        self._sendRequest('machine/device_power/device', data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
+        self._sendRequest(req, data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
 
     def onMoonrakerConnectionTimeoutError(self):
         messageText = "Error: Connection to Moonraker at {} timed out.".format(self._url)
@@ -287,8 +286,6 @@ class MoonrakerOutputDevice(OutputDevice):
 
         messageText = "Upload of '{}' to {} successfully completed"
 
-        # None evaluates to False
-        # see https://switowski.com/blog/checking-for-true-or-false
         if self._startPrint:
            messageText += " and print job initialized."
         else:
