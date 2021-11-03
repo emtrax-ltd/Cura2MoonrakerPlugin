@@ -19,6 +19,13 @@ Cura.MachineAction
         manager.reset()
     }
 
+    function outputFormat() {
+        if (outputFormatUfp.checked) {
+            return "ufp"
+        }
+        return "gcode"
+    }
+
     anchors.fill: parent;
     property var selectedInstance: null
 
@@ -27,9 +34,9 @@ Cura.MachineAction
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 580;
-        actionDialog.minimumHeight = screenScaleFactor * 410;
+        actionDialog.minimumHeight = screenScaleFactor * 390;
         actionDialog.maximumWidth = screenScaleFactor * 580;
-        actionDialog.maximumHeight = screenScaleFactor * 410;
+        actionDialog.maximumHeight = screenScaleFactor * 390;
     }
 
     Column {
@@ -58,28 +65,8 @@ Cura.MachineAction
         Item { width: parent.width;  height: 10; }
         Label { text: catalog.i18nc("@label", "API-Key (Optional - if the network is untrusted)"); }
         TextField {
-            id: api_keyField;
+            id: apiKeyField;
             text: manager.printerSettingAPIKey;
-            maximumLength: 1024;
-            anchors.left: parent.left;
-            anchors.right: parent.right;
-        }
-
-        Item { width: parent.width; height: 10; }
-        Label { text: catalog.i18nc("@label", "Username (HTTP Basic Auth)"); }
-        TextField {
-            id: http_userField;
-            text: manager.printerSettingHTTPUser;
-            maximumLength: 1024;
-            anchors.left: parent.left;
-            anchors.right: parent.right;
-        }
-
-        Item { width: parent.width;  height: 10; }
-        Label { text: catalog.i18nc("@label", "Password (HTTP Basic Auth)"); }
-        TextField {
-            id: http_passwordField;
-            text: manager.printerSettingHTTPPassword;
             maximumLength: 1024;
             anchors.left: parent.left;
             anchors.right: parent.right;
@@ -88,7 +75,7 @@ Cura.MachineAction
         Item { width: parent.width; height: 10; }
         Label { text: catalog.i18nc("@label", "Name of Moonraker Power Device in moonraker.conf"); }
         TextField {
-            id: power_deviceField;
+            id: powerDeviceField;
             text: manager.printerSettingPowerDevice;
             maximumLength: 1024;
             anchors.left: parent.left;
@@ -98,19 +85,35 @@ Cura.MachineAction
         Item { width: parent.width;  height: 10; }
         Label { text: catalog.i18nc("@label", "Output Format"); }
         RowLayout {
-            id: outputFormat;
-            ExclusiveGroup { id: outputFormatGroup }
+            id: outputFormatValue;
+            ExclusiveGroup { id: outputFormatValueGroup }
             RadioButton {
                 id: outputFormatGcode;
                 checked: manager.printerOutputFormat != "ufp";
                 text: "G-code";
-                exclusiveGroup: outputFormatGroup;
+                exclusiveGroup: outputFormatValueGroup;
             }
             RadioButton {
                 id: outputFormatUfp;
                 checked: manager.printerOutputFormat == "ufp";
                 text: "UFP with Thumbnail";
-                exclusiveGroup: outputFormatGroup;
+                exclusiveGroup: outputFormatValueGroup;
+            }
+        }
+
+        Item { width: parent.width;  height: 10; }
+        Label { text: catalog.i18nc("@label", "Upload Process"); }
+        ColumnLayout {
+            id: uploadProcess;
+            CheckBox {
+                id: uploadRememberStateBox;
+                checked: manager.printerUploadRememberState;
+                text: "Remember state of \"Start print job\"";
+            }
+            CheckBox {
+                id: uploadAutoHideMessageboxBox;
+                checked: manager.printerUploadAutoHideMessagebox;
+                text: "Auto hide messagebox for successful upload (30 seconds)";
             }
         }
 
@@ -170,11 +173,11 @@ Cura.MachineAction
                 onClicked: {
                     manager.saveConfig({
                         'url': urlField.text,
-                        'api_key': api_keyField.text,
-                        'http_user': http_userField.text,
-                        'http_password': http_passwordField.text,
-                        'power_device': power_deviceField.text,
-                        'output_format_ufp': outputFormatUfp.checked,
+                        'api_key': apiKeyField.text,
+                        'power_device': powerDeviceField.text,
+                        'output_format': outputFormat(),
+                        'upload_remember_state': uploadRememberStateBox.checked,
+                        'upload_autohide_messagebox': uploadAutoHideMessageboxBox.checked,
                         'trans_input': transInputField.text,
                         'trans_output': transOutputField.text,
                         'trans_remove': transRemoveField.text

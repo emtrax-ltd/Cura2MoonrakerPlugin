@@ -30,10 +30,10 @@ class MoonrakerAction(MachineAction):
     def _onGlobalContainerStackChanged(self) -> None:
         self.printerSettingsUrlChanged.emit()
         self.printerSettingsAPIKeyChanged.emit()
-        self.printerSettingsHTTPUserChanged.emit()
-        self.printerSettingsHTTPPasswordChanged.emit()
         self.printerSettingsPowerDeviceChanged.emit()
         self.printerOutputFormatChanged.emit()
+        self.printerUploadRememberStateChanged.emit()
+        self.printerUploadAutoHideMessageboxChanged.emit()
         self.printerTransInputChanged.emit()
         self.printerTransOutputChanged.emit()
         self.printerTransRemoveChanged.emit()
@@ -49,20 +49,20 @@ class MoonrakerAction(MachineAction):
     def _reset(self) -> None:
         self.printerSettingsUrlChanged.emit()
         self.printerSettingsAPIKeyChanged.emit()
-        self.printerSettingsHTTPUserChanged.emit()
-        self.printerSettingsHTTPPasswordChanged.emit()
         self.printerSettingsPowerDeviceChanged.emit()
         self.printerOutputFormatChanged.emit()
+        self.printerUploadRememberStateChanged.emit()
+        self.printerUploadAutoHideMessageboxChanged.emit()
         self.printerTransInputChanged.emit()
         self.printerTransOutputChanged.emit()
         self.printerTransRemoveChanged.emit()
 
     printerSettingsUrlChanged = pyqtSignal()
     printerSettingsAPIKeyChanged = pyqtSignal()
-    printerSettingsHTTPUserChanged = pyqtSignal()
-    printerSettingsHTTPPasswordChanged = pyqtSignal()
     printerSettingsPowerDeviceChanged = pyqtSignal()
     printerOutputFormatChanged = pyqtSignal()
+    printerUploadRememberStateChanged = pyqtSignal()
+    printerUploadAutoHideMessageboxChanged = pyqtSignal()
     printerTransInputChanged = pyqtSignal()
     printerTransOutputChanged = pyqtSignal()
     printerTransRemoveChanged = pyqtSignal()
@@ -81,20 +81,6 @@ class MoonrakerAction(MachineAction):
             return s.get("api_key", "")
         return ""
 
-    @pyqtProperty(str, notify = printerSettingsHTTPUserChanged)
-    def printerSettingHTTPUser(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("http_user", "")
-        return ""
-
-    @pyqtProperty(str, notify = printerSettingsHTTPPasswordChanged)
-    def printerSettingHTTPPassword(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("http_password", "")
-        return ""
-
     @pyqtProperty(str, notify = printerSettingsPowerDeviceChanged)
     def printerSettingPowerDevice(self) -> Optional[str]:
         s = get_config()
@@ -108,6 +94,20 @@ class MoonrakerAction(MachineAction):
         if s:
             return s.get("output_format", "gcode")
         return "gcode"
+
+    @pyqtProperty(bool, notify = printerUploadRememberStateChanged)
+    def printerUploadRememberState(self) -> Optional[bool]:
+        s = get_config()
+        if s:
+            return s.get("upload_remember_state", False)
+        return False
+
+    @pyqtProperty(bool, notify = printerUploadAutoHideMessageboxChanged)
+    def printerUploadAutoHideMessagebox(self) -> Optional[bool]:
+        s = get_config()
+        if s:
+            return s.get("upload_autohide_messagebox", False)
+        return False
 
     @pyqtProperty(str, notify = printerTransInputChanged)
     def printerTransInput(self) -> Optional[str]:
@@ -138,8 +138,8 @@ class MoonrakerAction(MachineAction):
             params['url'] += '/'
 
         conf = params
-        conf['output_format'] = "ufp" if params['output_format_ufp'] == True else "gcode"
-        del conf['output_format_ufp']
+        s = get_config()
+        conf["upload_start_print_job"] = s.get("upload_start_print_job", False) if s else False
         save_config(conf)
 
         Logger.log("d", "config saved")

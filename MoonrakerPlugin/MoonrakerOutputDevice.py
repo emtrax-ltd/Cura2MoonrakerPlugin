@@ -1,4 +1,3 @@
-import base64
 import json
 import os.path
 import urllib.parse
@@ -21,6 +20,8 @@ from UM.Message import Message
 from UM.OutputDevice import OutputDeviceError
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.PluginRegistry import PluginRegistry
+
+from .MoonrakerSettings import get_config, save_config
 
 catalog = i18nCatalog("cura")
 
@@ -47,12 +48,13 @@ class MoonrakerOutputDevice(OutputDevice):
 
         self._url = config.get("url", "")
         self._api_key = config.get("api_key", "")
-        self._http_user = config.get("http_user", "")
-        self._http_password = config.get("http_password", "")
         self._power_device = config.get("power_device", "")
         self._output_format = config.get("output_format", "gcode")
         if self._output_format and self._output_format != "ufp":
             self._output_format = "gcode"
+        self._upload_start_print_job = config.get("upload_start_print_job", False);
+        self._upload_remember_state = config.get("upload_remember_state", False);
+        self._upload_autohide_messagebox = config.get("upload_autohide_messagebox", False);
         self._trans_input = config.get("trans_input", "")
         self._trans_output = config.get("trans_output", "")
         self._trans_remove = config.get("trans_remove", "")
@@ -71,7 +73,7 @@ class MoonrakerOutputDevice(OutputDevice):
 
         self._timeout_cnt = 0
 
-        Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {} | HTTP Basic Auth: user:{}, password:{}".format(self._name_id, self._url, self._api_key, self._http_user if self._http_user else "<empty>", "set" if self._http_password else "<empty>",))
+        Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {}".format(self._name_id, self._url, self._api_key,))
         self._resetState()
 
     def requestWrite(self, node, fileName = None, *args, **kwargs):
@@ -117,9 +119,9 @@ class MoonrakerOutputDevice(OutputDevice):
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
         self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._output_format) - 1)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
+        self._dialog.findChild(QObject, "printField").setProperty('checked', self._upload_start_print_job)
 
     def onFilenameChanged(self):
-        fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
 
         forbidden_characters = ":*?\"<>|"
@@ -144,6 +146,11 @@ class MoonrakerOutputDevice(OutputDevice):
         Logger.log("d", "Filename set to: " + self._fileName)
 
         self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
+        if self._upload_remember_state:
+            self._upload_start_print_job = self._startPrint
+            s = get_config()
+            s["upload_start_print_job"] = self._startPrint
+            save_config(s)
         Logger.log("d", "Print set to: " + str(self._startPrint))
 
         self._dialog.deleteLater()
@@ -290,7 +297,7 @@ class MoonrakerOutputDevice(OutputDevice):
            messageText += " and print job initialized."
         else:
            messageText += "."
-        self._message = Message(catalog.i18nc("@info:status", messageText.format(os.path.basename(self._fileName), self._name)), 0, False)
+        self._message = Message(catalog.i18nc("@info:status", messageText.format(os.path.basename(self._fileName), self._name)), 30 if self._upload_autohide_messagebox else 0, True)
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
@@ -365,10 +372,6 @@ class MoonrakerOutputDevice(OutputDevice):
 
         if self._api_key:
             headers['X-API-Key'] = self._api_key
-
-        if self._http_user and self._http_password:
-            auth = "{}:{}".format(self._http_user, self._http_password).encode()
-            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode("utf-8")
 
         postData = data
         if data is not None:
