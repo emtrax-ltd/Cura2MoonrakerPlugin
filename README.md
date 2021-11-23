@@ -16,6 +16,7 @@ The installation of this plugin is straightforward ... no compiling etc.
    * linux:
       * The user based installation path is at `~/.local/share/cura/[version number]/plugins`.
 3. Copy the extracted `Cura2MoonrakerPlugin`folder into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. Looks like `...\cura\[version number]\plugins\Cura2MoonrakerPlugin\Cura2MoonrakerPlugin`.
+4. Quit Cura and re-open Cura.
 
 ## How to Configure
 To configure your Moonraker 3D printer...
