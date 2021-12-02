@@ -73,7 +73,7 @@ Cura.MachineAction
         }
 
         Item { width: parent.width; height: 10; }
-        Label { text: catalog.i18nc("@label", "Name of Moonraker Power Device in moonraker.conf"); }
+        Label { text: catalog.i18nc("@label", "Name of Moonraker Power Device(s) in moonraker.conf"); }
         TextField {
             id: powerDeviceField;
             text: manager.printerSettingPowerDevice;
