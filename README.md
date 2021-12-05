@@ -23,7 +23,8 @@ To configure your Moonraker 3D printer...
 1. Go to Settings -> Printer -> Manage Printers
 2. Select <Your Printername> and click on 'Connect Moonraker'
 3. Fill in the URL and select your preferred output format
-4. Click 'Save Config'
+4. Optionally, configure one or more power devices to turn on before starting print.
+5. Click 'Save Config'
 
 ## How to Upload
 1. Open your STL model in Cura and click `Slice`.
@@ -39,6 +40,24 @@ Example:
   - remove: "()"
 
   "Simple Test v1.0 (ABS)" results into "Simple_Test_v1-0_ABS"
+
+## Power Devices
+If you have devices configured for power control in Moonraker, you can configure them in 
+the plug-in. For a single device, just enter that device's name from Moonraker config.
+
+If you have more than one power device you wish to turn on, enter a comma-separated list,
+with the first device being the device that will be queried before attempting to turn anything
+on.
+
+Example:
+ - Target: One config device with an entry name of [power printer]
+ - Setting value: "printer" (no quotes)
+ - Action: Query "printer" device state, turn everything on if "printer" is off.
+ 
+ - Target: Two devices, one with an entry name of "[power printer]", and another called "[power lights]"
+ - Setting value: "printer, lights" (no quotes, whitespace will be ignored)
+ - Action: Query "printer" device state, turn everything on if "printer" is off. "lights" device
+   state will be ignored.
 
 ----
 

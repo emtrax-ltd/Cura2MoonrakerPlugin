@@ -186,8 +186,13 @@ class MoonrakerOutputDevice(OutputDevice):
     def checkPrinterDeviceStatus(self, reply):
         if reply:
             res = self._verifyReply(reply)
-            power_status = res['result'][self._power_device]
-            log_msg = "Power device [power {}] status == '{}';".format(self._power_device, power_status)
+            device = self._power_device
+            if "," in device:
+                devices = [x.strip() for x in self._power_device.split(',')]
+                device = devices[0]
+
+            power_status = res['result'][device]
+            log_msg = "Power device [power {}] status == '{}';".format(device, power_status)
             log_msg += " self._startPrint is {}".format(self._startPrint)
 
             if power_status == 'on':
@@ -206,17 +211,30 @@ class MoonrakerOutputDevice(OutputDevice):
                     self._sendRequest('printer/firmware_restart', data = postData, dataIsJSON = True, on_success = self.getPrinterInfo)
 
     def getPrinterDeviceStatus(self):
-        Logger.log("d", "Checking printer device [power {}] status".format(self._power_device))
-        self._sendRequest('machine/device_power/device?device={}'.format(self._power_device), on_success = self.checkPrinterDeviceStatus)
+        device = self._power_device
+        if "," in device:
+            devices = [x.strip() for x in self._power_device.split(',')]
+            device = devices[0]
+
+        Logger.log("d", "Checking printer device [power {}] status".format(device))
+        self._sendRequest('machine/device_power/device?device={}'.format(device), on_success = self.checkPrinterDeviceStatus)
 
     def postPrinterDevicePowerOn(self, reply=None):
-        Logger.log("d", "Turning on Moonraker power device [power {}]".format(self._power_device))
-        
-        postJSON = '{}'.encode()
-        params = {'device': self._power_device, 'action': 'on'}
-        req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
-
-        self._sendRequest(req, data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
+        device = self._power_device
+        if "," in device:
+            devices = [x.strip() for x in self._power_device.split(',')]
+            for dev in devices:
+                Logger.log("d", "Turning on Moonraker power device [power {}]".format(dev))
+                postJSON = '{}'.encode()
+                params = {'device': dev, 'action': 'on'}
+                req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
+                self._sendRequest(req, data=postJSON, dataIsJSON=True, on_success=self.getPrinterInfo)
+        else:
+            Logger.log("d", "Turning on (single) Moonraker power device [power {}]".format(self._power_device))
+            postJSON = '{}'.encode()
+            params = {'device': self._power_device, 'action': 'on'}
+            req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
+            self._sendRequest(req, data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
 
     def onMoonrakerConnectionTimeoutError(self):
         messageText = "Error: Connection to Moonraker at {} timed out.".format(self._url)
