@@ -6,7 +6,7 @@
 ## How to Install
 The installation of this plugin is straightforward ... no compiling etc.
 
-1. Download this repository as zip file (https://github.com/emtrax-ltd/Cura2MoonrakerPlugin/archive/main.zip) and unzip it
+1. Download this repository as zip file (https://github.com/emtrax-ltd/Cura2MoonrakerPlugin/archive/main.zip) and unzip it.
 2. Find your Cura plugins directory:
    * Windows:
       * The default installation path is `C:\Program Files\Ultimaker Cura [version number]\plugins`.
@@ -16,19 +16,19 @@ The installation of this plugin is straightforward ... no compiling etc.
    * linux:
       * The user based installation path is at `~/.local/share/cura/[version number]/plugins`.
 3. Copy the extracted `Cura2MoonrakerPlugin`folder into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. Looks like `...\cura\[version number]\plugins\Cura2MoonrakerPlugin\Cura2MoonrakerPlugin`.
-4. Quit Cura and re-open Cura.
+4. If Cura is allready running: quit and restart it.
 
 ## How to Configure
 To configure your Moonraker 3D printer...
-1. Go to Settings -> Printer -> Manage Printers
-2. Select <Your Printername> and click on 'Connect Moonraker'
-3. Fill in the URL and select your preferred output format
+1. Go to `Settings` -> `Printer` -> `Manage Printers`.
+2. Select <Your Printername> and click on `Connect Moonraker`.
+3. Fill in the URL and select your preferred output format.
 4. Optionally, configure one or more power devices to turn on before starting print.
-5. Click 'Save Config'
+5. Click `Close` - changes will be automatically be saved.
 
 ## How to Upload
 1. Open your STL model in Cura and click `Slice`.
-2. Click the small up arrow on the right and select `Upload to <Your Printername>`:
+2. Click the small up arrow on the right and select `Upload to <Printername>`.
 3. Now you can modify the filename, select the option to create a print job and finally... click `Upload` :)
   
 ## How to "Filename Translation"
