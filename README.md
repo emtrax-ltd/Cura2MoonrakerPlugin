@@ -24,7 +24,7 @@ To configure your Moonraker 3D printer...
 2. Select <Your Printername> and click on `Connect Moonraker`.
 3. Fill in the URL and select your preferred output format.
 4. Optionally, configure one or more power devices to turn on before starting print.
-5. Click `Close` - changes will be automatically be saved.
+5. Click `Close` - all changes will be saved automatically.
 
 ## How to Upload
 1. Open your STL model in Cura and click `Slice`.
