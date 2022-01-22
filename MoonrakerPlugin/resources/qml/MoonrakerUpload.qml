@@ -18,7 +18,7 @@ UM.Dialog {
     id: base;
     title: catalog.i18nc("@title:dialog", "Upload to Moonraker");
     minimumWidth: screenScaleFactor * 400
-    minimumHeight: screenScaleFactor * 140
+    minimumHeight: screenScaleFactor * 155
 
     signal textChanged(string text)
     signal selectText()
