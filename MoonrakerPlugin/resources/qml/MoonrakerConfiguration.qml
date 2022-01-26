@@ -50,9 +50,11 @@ Cura.MachineAction {
         radius: UM.Theme.getSize("default_radius").width
         color: UM.Theme.getColor("main_background")
 
-        Item {
+        Cura.ScrollView {
             id: configurationBase
             anchors.fill: parent
+            bottomPadding: machineLabel.height * screenScaleFactor + UM.Theme.getSize("default_margin").width * screenScaleFactor
+            scrollAlwaysVisible: false
 
             property int columnSpacing: 3 * screenScaleFactor
 
@@ -87,33 +89,29 @@ Cura.MachineAction {
                     }
                     RowLayout {
                         width: parent.width
+                        x: 15
+
                         Label {
                             text: catalog.i18nc("@label", "Moonraker Address (URL)")
                             font: UM.Theme.getFont("default")
                             color: UM.Theme.getColor("text")
                             renderType: Text.NativeRendering
-                            leftPadding: 15
                         }
                         Label {
                             visible: !base.validUrl
                             text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/")
                             font: UM.Theme.getFont("default_italic")
                             renderType: Text.NativeRendering
-                            color: "red"
+                            color: UM.Theme.getColor("error")
                             leftPadding: 15
                         }
                     }
-                    TextField {
+                    Cura.TextField {
                         id: urlField
-                        text: manager.printerSettingUrl
-                        font: UM.Theme.getFont("default")
-                        color: UM.Theme.getColor("text")
-                        renderType: Text.NativeRendering                        
+                        text: manager.printerSettingUrl                 
                         maximumLength: 1024
                         width: parent.width - 40
                         x: 25
-                        padding: 0
-                        leftPadding: UM.Theme.getSize("narrow_margin").width
                         onTextChanged: base.validUrl = manager.validUrl(urlField.text)
                         onEditingFinished: { updateConfig() }
                     }
@@ -127,19 +125,14 @@ Cura.MachineAction {
                         font: UM.Theme.getFont("default")
                         color: UM.Theme.getColor("text")
                         renderType: Text.NativeRendering
-                        leftPadding: 15
+                        x: 15
                     }
-                    TextField {
+                    Cura.TextField {
                         id: apiKeyField
                         text: manager.printerSettingAPIKey
-                        font: UM.Theme.getFont("default")
-                        color: UM.Theme.getColor("text")
-                        renderType: Text.NativeRendering
                         maximumLength: 1024
                         width: parent.width - 40
                         x: 25
-                        padding: 0
-                        leftPadding: UM.Theme.getSize("narrow_margin").width
                         onEditingFinished: { updateConfig() }
                     }
 
@@ -152,19 +145,14 @@ Cura.MachineAction {
                         font: UM.Theme.getFont("default")
                         color: UM.Theme.getColor("text")
                         renderType: Text.NativeRendering
-                        leftPadding: 15
+                        x: 15
                     }
-                    TextField {
+                    Cura.TextField {
                         id: powerDeviceField
                         text: manager.printerSettingPowerDevice
-                        font: UM.Theme.getFont("default")
-                        color: UM.Theme.getColor("text")
-                        renderType: Text.NativeRendering
                         maximumLength: 1024
                         width: parent.width - 40
                         x: 25
-                        padding: 0
-                        leftPadding: UM.Theme.getSize("narrow_margin").width
                         onEditingFinished: { updateConfig() }
                     }
 
@@ -187,26 +175,26 @@ Cura.MachineAction {
                         font: UM.Theme.getFont("default")
                         color: UM.Theme.getColor("text")
                         renderType: Text.NativeRendering
-                        leftPadding: 15
+                        x: 15
                     }
                     ButtonGroup {
-                        buttons: outputFormatValue.children
+                        id: outputFormatValue
                     }
                     RowLayout {
-                        id: outputFormatValue
-                        RadioButton {
+                        x: 25
+
+                        Cura.RadioButton {
                             id: outputFormatGcode
+                            text: catalog.i18nc("@label", "G-code")
                             checked: manager.printerOutputFormat != "ufp"
-                            text: catalog.i18nc("@option:radio", "G-code")
-                            font: UM.Theme.getFont("default")
-                            leftPadding: 25
+                            ButtonGroup.group: outputFormatValue
                             onClicked: { updateConfig() }
                         }
-                        RadioButton {
+                        Cura.RadioButton {
                             id: outputFormatUfp
+                            text: catalog.i18nc("@label", "UFP with Thumbnail")
                             checked: manager.printerOutputFormat == "ufp"
-                            text: catalog.i18nc("@option:radio", "UFP with Thumbnail")
-                            font: UM.Theme.getFont("default")
+                            ButtonGroup.group: outputFormatValue
                             onClicked: { updateConfig() }
                         }
                     }
@@ -220,22 +208,22 @@ Cura.MachineAction {
                         font: UM.Theme.getFont("default")
                         color: UM.Theme.getColor("text")
                         renderType: Text.NativeRendering
-                        leftPadding: 15
+                        x: 15
                     }
-                    CheckBox {
+                    Cura.CheckBox {
                         id: uploadRememberStateBox
-                        checked: manager.printerUploadRememberState
-                        text: catalog.i18nc("@option:check", "Remember state of \"Start print job\"")
+                        text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
                         font: UM.Theme.getFont("default")
-                        leftPadding: 25
+                        x: 25
+                        checked: manager.printerUploadRememberState
                         onClicked: { updateConfig() }
                     }
-                    CheckBox {
+                    Cura.CheckBox {
                         id: uploadAutoHideMessageboxBox
-                        checked: manager.printerUploadAutoHideMessagebox
-                        text: catalog.i18nc("@option:check", "Auto hide messagebox for successful upload (30 seconds)")
+                        text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
                         font: UM.Theme.getFont("default")
-                        leftPadding: 25
+                        x: 25
+                        checked: manager.printerUploadAutoHideMessagebox
                         onClicked: { updateConfig() }
                     }
 
@@ -244,12 +232,13 @@ Cura.MachineAction {
                         height: 10
                     }
                     RowLayout {
+                        x: 15
+
                         Label {
                             text: catalog.i18nc("@label", "Filename Translation ")
                             font: UM.Theme.getFont("default")
                             color: UM.Theme.getColor("text")
                             renderType: Text.NativeRendering
-                            leftPadding: 15
                         }
                         Label {
                             text: catalog.i18nc("@label", "filename.translate(filename.maketrans(input[], output[], remove[])")
@@ -260,66 +249,69 @@ Cura.MachineAction {
                         }
                     }
                     RowLayout {
+                        x: 25
+                        Layout.alignment: Qt.AlignVCenter
+
                         Label {
                             text: catalog.i18nc("@label", "Input")
                             font: UM.Theme.getFont("default")
                             color: UM.Theme.getColor("text")
                             renderType: Text.NativeRendering
-                            leftPadding: 25
+                            
                         }
-                        TextField {
-                            id: transInputField
-                            text: manager.printerTransInput
-                            font: UM.Theme.getFont("default")
-                            color: UM.Theme.getColor("text")
-                            renderType: Text.NativeRendering
-                            width: 60
-                            maximumLength: 128
-                            padding: 0
-                            leftPadding: UM.Theme.getSize("narrow_margin").width
-                            onTextChanged: base.validTrans = manager.validTrans(transInputField.text, transOutputField.text)
-                            onEditingFinished: { updateConfig() }
-                        }
+                        Rectangle {
+                            width: 120
+                            implicitHeight: transInputField.implicitHeight
 
+                            Cura.TextField {
+                                id: transInputField
+                                text: manager.printerTransInput
+                                width: parent.width
+                                maximumLength: 128
+                                onTextChanged: base.validTrans = manager.validTrans(transInputField.text, transOutputField.text)
+                                onEditingFinished: { updateConfig() }
+                            }
+                        }
+                        
                         Label {
                             text: catalog.i18nc("@label", "Output")
                             font: UM.Theme.getFont("default")
                             color: UM.Theme.getColor("text")
                             renderType: Text.NativeRendering
                             leftPadding: 15
-                        }
-                        TextField {
-                            id: transOutputField
-                            text: manager.printerTransOutput
-                            font: UM.Theme.getFont("default")
-                            color: UM.Theme.getColor("text")
-                            renderType: Text.NativeRendering
-                            width: 60
-                            maximumLength: 128
-                            padding: 0
-                            leftPadding: UM.Theme.getSize("narrow_margin").width
-                            onTextChanged: base.validTrans = manager.validTrans(transInputField.text, transOutputField.text)
-                            onEditingFinished: { updateConfig() }
-                        }
+                        }                        
+                        Rectangle { 
+                            width: 120
+                            implicitHeight: transOutputField.implicitHeight
 
+                            Cura.TextField {
+                                id: transOutputField
+                                text: manager.printerTransOutput
+                                width: parent.width
+                                maximumLength: 128
+                                onTextChanged: base.validTrans = manager.validTrans(transInputField.text, transOutputField.text)
+                                onEditingFinished: { updateConfig() }
+                            }
+                        }
+                        
                         Label {
                             text: catalog.i18nc("@label", "Remove")
                             font: UM.Theme.getFont("default")
                             color: UM.Theme.getColor("text")
                             renderType: Text.NativeRendering
                             leftPadding: 15
-                        }
-                        TextField {
-                            id: transRemoveField
-                            text: manager.printerTransRemove
-                            font: UM.Theme.getFont("default")
-                            color: UM.Theme.getColor("text")
-                            renderType: Text.NativeRendering
-                            width: 60
-                            padding: 0
-                            leftPadding: UM.Theme.getSize("narrow_margin").width
-                            maximumLength: 128
-                            onEditingFinished: { updateConfig() }
+                        }                        
+                        Rectangle {
+                            width: 120
+                            implicitHeight: transRemoveField.implicitHeight
+
+                            Cura.TextField {
+                                id: transRemoveField
+                                text: manager.printerTransRemove
+                                width: parent.width
+                                maximumLength: 128
+                                onEditingFinished: { updateConfig() }
+                            }
                         }
                     }
 
@@ -330,9 +322,9 @@ Cura.MachineAction {
                         visible: !base.validTrans
                         text: catalog.i18nc("@error", "Number of mapping characters in the input must be equal to the output!")
                         font: UM.Theme.getFont("default_italic")
-                        color: "red"
+                        color: UM.Theme.getColor("error")
                         renderType: Text.NativeRendering
-                        leftPadding: 25
+                        x: 25
                     }
                 }
             }

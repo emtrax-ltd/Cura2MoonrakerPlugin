@@ -16,9 +16,9 @@ UM.Dialog {
     property string validationError;
 
     id: base;
-    title: catalog.i18nc("@title:dialog", "Upload to Moonraker");
+    title: catalog.i18nc("@title:window", "Upload to Moonraker");
     minimumWidth: screenScaleFactor * 400
-    minimumHeight: screenScaleFactor * 155
+    minimumHeight: screenScaleFactor * 130 + UM.Theme.getSize("default_margin").width * 2 * screenScaleFactor
 
     signal textChanged(string text)
     signal selectText()
@@ -59,11 +59,11 @@ UM.Dialog {
                 Column {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-
                     spacing: dialogBase.columnSpacing
 
                     RowLayout {
                         width: parent.width
+                        
                         Label {
                             text: catalog.i18nc("@label", "Filename")
                             font: UM.Theme.getFont("default")
@@ -73,13 +73,13 @@ UM.Dialog {
                         Label {
                             text: base.validationError
                             font: UM.Theme.getFont("default_italic")
-                            color: "red"
+                            color: UM.Theme.getColor("error")
                             leftPadding: 15
                             visible: !base.validName
                         }
                     }
 
-                    TextField {
+                    Cura.TextField {
                         objectName: "nameField"
                         id: nameField
                         text: base.object
@@ -97,14 +97,11 @@ UM.Dialog {
                         height: 10
                     }
                     RowLayout {
-                        CheckBox {
+                        Cura.CheckBox {
                             objectName: "printField";
                             id: printField;
-                        }
-                        Label {
                             text: catalog.i18nc("@label", "Start print job")
                             font: UM.Theme.getFont("default")
-                            color: UM.Theme.getColor("text")
                         }
                     }
                 }
