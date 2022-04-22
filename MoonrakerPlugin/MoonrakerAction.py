@@ -3,7 +3,12 @@ import json
 import re
 from typing import Dict, Type, TYPE_CHECKING, List, Optional, cast
 
-from PyQt5.QtCore import QObject, QVariant, pyqtSlot, pyqtProperty, pyqtSignal
+USE_QT5 = False
+try:
+    from PyQt6.QtCore import QObject, QVariant, pyqtSlot, pyqtProperty, pyqtSignal
+except ImportError:
+    from PyQt5.QtCore import QObject, QVariant, pyqtSlot, pyqtProperty, pyqtSignal
+    USE_QT5 = True
 
 from cura.CuraApplication import CuraApplication
 from cura.MachineAction import MachineAction
@@ -15,28 +20,27 @@ from UM.i18n import i18nCatalog
 
 catalog = i18nCatalog("cura")
 
-from .MoonrakerSettings import delete_config, get_config, save_config
+from .MoonrakerSettings import getConfig, saveConfig, deleteConfig
 
 class MoonrakerAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
         super().__init__("MoonrakerAction", catalog.i18nc("@action", "Connect Moonraker"))
-
-        self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'MoonrakerConfiguration.qml')
+        self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerConfiguration.qml')
 
         self._application = CuraApplication.getInstance()
         self._application.globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
         ContainerRegistry.getInstance().containerAdded.connect(self._onContainerAdded)
 
     def _onGlobalContainerStackChanged(self) -> None:
-        self.printerSettingsUrlChanged.emit()
-        self.printerSettingsAPIKeyChanged.emit()
-        self.printerSettingsPowerDeviceChanged.emit()
-        self.printerOutputFormatChanged.emit()
-        self.printerUploadRememberStateChanged.emit()
-        self.printerUploadAutoHideMessageboxChanged.emit()
-        self.printerTransInputChanged.emit()
-        self.printerTransOutputChanged.emit()
-        self.printerTransRemoveChanged.emit()
+        self.settingsUrlChanged.emit()
+        self.settingsApiKeyChanged.emit()
+        self.settingsPowerDeviceChanged.emit()
+        self.settingsOutputFormatChanged.emit()
+        self.settingsUploadRememberStateChanged.emit()
+        self.settingsUploadAutohideMessageboxChanged.emit()
+        self.settingsTranslateInputChanged.emit()
+        self.settingsTranslateOutputChanged.emit()
+        self.settingsTranslateRemoveChanged.emit()
 
     def _onContainerAdded(self, container: "ContainerInterface") -> None:
         # Add this action as a supported action to all machine definitions
@@ -47,133 +51,108 @@ class MoonrakerAction(MachineAction):
             self._application.getMachineActionManager().addSupportedAction(container.getId(), self.getKey())
 
     def _reset(self) -> None:
-        self.printerSettingsUrlChanged.emit()
-        self.printerSettingsAPIKeyChanged.emit()
-        self.printerSettingsPowerDeviceChanged.emit()
-        self.printerOutputFormatChanged.emit()
-        self.printerUploadRememberStateChanged.emit()
-        self.printerUploadAutoHideMessageboxChanged.emit()
-        self.printerTransInputChanged.emit()
-        self.printerTransOutputChanged.emit()
-        self.printerTransRemoveChanged.emit()
+        self.settingsUrlChanged.emit()
+        self.settingsApiKeyChanged.emit()
+        self.settingsPowerDeviceChanged.emit()
+        self.settingsOutputFormatChanged.emit()
+        self.settingsUploadRememberStateChanged.emit()
+        self.settingsUploadAutohideMessageboxChanged.emit()
+        self.settingsTranslateInputChanged.emit()
+        self.settingsTranslateOutputChanged.emit()
+        self.settingsTranslateRemoveChanged.emit()
 
-    printerSettingsUrlChanged = pyqtSignal()
-    printerSettingsAPIKeyChanged = pyqtSignal()
-    printerSettingsPowerDeviceChanged = pyqtSignal()
-    printerOutputFormatChanged = pyqtSignal()
-    printerUploadRememberStateChanged = pyqtSignal()
-    printerUploadAutoHideMessageboxChanged = pyqtSignal()
-    printerTransInputChanged = pyqtSignal()
-    printerTransOutputChanged = pyqtSignal()
-    printerTransRemoveChanged = pyqtSignal()
+    settingsUrlChanged = pyqtSignal()
+    settingsApiKeyChanged = pyqtSignal()
+    settingsPowerDeviceChanged = pyqtSignal()
+    settingsOutputFormatChanged = pyqtSignal()
+    settingsUploadRememberStateChanged = pyqtSignal()
+    settingsUploadAutohideMessageboxChanged = pyqtSignal()
+    settingsTranslateInputChanged = pyqtSignal()
+    settingsTranslateOutputChanged = pyqtSignal()
+    settingsTranslateRemoveChanged = pyqtSignal()
 
-    @pyqtProperty(str, notify = printerSettingsUrlChanged)
-    def printerSettingUrl(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("url", "")
-        return ""
+    @pyqtProperty(str, notify = settingsUrlChanged)
+    def settingsUrl(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("url", "") if config else "x"
 
-    @pyqtProperty(str, notify = printerSettingsAPIKeyChanged)
-    def printerSettingAPIKey(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("api_key", "")
-        return ""
+    @pyqtProperty(str, notify = settingsApiKeyChanged)
+    def settingsApiKey(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("api_key", "") if config else ""
 
-    @pyqtProperty(str, notify = printerSettingsPowerDeviceChanged)
-    def printerSettingPowerDevice(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("power_device", "")
-        return ""
+    @pyqtProperty(str, notify = settingsPowerDeviceChanged)
+    def settingsPowerDevice(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("power_device", "") if config else ""
 
-    @pyqtProperty(str, notify = printerOutputFormatChanged)
-    def printerOutputFormat(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("output_format", "gcode")
-        return "gcode"
+    @pyqtProperty(str, notify = settingsOutputFormatChanged)
+    def settingsOutputFormat(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("output_format", "gcode" if config else "gcode")
 
-    @pyqtProperty(bool, notify = printerUploadRememberStateChanged)
-    def printerUploadRememberState(self) -> Optional[bool]:
-        s = get_config()
-        if s:
-            return s.get("upload_remember_state", False)
-        return False
+    @pyqtProperty(bool, notify = settingsUploadRememberStateChanged)
+    def settingsUploadRememberState(self) -> Optional[bool]:
+        config = getConfig()
+        return config.get("upload_remember_state", False) if config else False
 
-    @pyqtProperty(bool, notify = printerUploadAutoHideMessageboxChanged)
-    def printerUploadAutoHideMessagebox(self) -> Optional[bool]:
-        s = get_config()
-        if s:
-            return s.get("upload_autohide_messagebox", False)
-        return False
+    @pyqtProperty(bool, notify = settingsUploadAutohideMessageboxChanged)
+    def settingsUploadAutohideMessagebox(self) -> Optional[bool]:
+        config = getConfig()
+        return config.get("upload_autohide_messagebox", False) if config else False
 
-    @pyqtProperty(str, notify = printerTransInputChanged)
-    def printerTransInput(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("trans_input", "")
-        return ""
+    @pyqtProperty(str, notify = settingsTranslateInputChanged)
+    def settingsTranslateInput(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("trans_input", "") if config else ""
 
-    @pyqtProperty(str, notify = printerTransOutputChanged)
-    def printerTransOutput(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("trans_output", "")
-        return ""
+    @pyqtProperty(str, notify = settingsTranslateOutputChanged)
+    def settingsTranslateOutput(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("trans_output", "") if config else ""
 
-    @pyqtProperty(str, notify = printerTransRemoveChanged)
-    def printerTransRemove(self) -> Optional[str]:
-        s = get_config()
-        if s:
-            return s.get("trans_remove", "")
-        return ""
+    @pyqtProperty(str, notify = settingsTranslateRemoveChanged)
+    def settingsTranslateRemove(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("trans_remove", "") if config else ""
 
     @pyqtSlot(QVariant)
     def saveConfig(self, paramsQJSValObj):
-        params = paramsQJSValObj.toVariant()
-
-        if not params['url'].endswith('/'):
-            params['url'] += '/'
-
-        conf = params
-        s = get_config()
-        conf["upload_start_print_job"] = s.get("upload_start_print_job", False) if s else False
-        save_config(conf)
+        oldConfig = getConfig()
+        config = paramsQJSValObj.toVariant()
+        if not config["url"].endswith('/'):
+            config["url"] += '/'
+        config["upload_start_print_job"] = oldConfig.get("upload_start_print_job", False) if oldConfig else False
+        saveConfig(config)
 
         Logger.log("d", "config saved")
-
         # trigger a stack change to reload the output devices
         self._application.globalContainerStackChanged.emit()
 
     @pyqtSlot()
     def deleteConfig(self):
-        if delete_config():
+        if deleteConfig():
             Logger.log("d", "config deleted")
-
             # trigger a stack change to reload the output devices
             self._application.globalContainerStackChanged.emit()
         else:
             Logger.log("d", "no config to delete")
 
     @pyqtSlot(str, result = bool)
-    def validUrl(self, newUrl):
-        if newUrl.startswith('\\\\'):
+    def validUrl(self, url):
+        if url.startswith('\\\\'):
             # no UNC paths
             return False
-        if not re.match('^https?://.', newUrl):
+        if not re.match('^https?://.', url):
             # missing https?://
             return False
-        if '@' in newUrl:
+        if '@' in url:
             # @ is probably HTTP basic auth, which is a separate setting
             return False
-
         return True
 
     @pyqtSlot(str, str, result = bool)
-    def validTrans(self, newTransInput, newTransOutput):
-        if len(newTransInput) != len(newTransOutput):
+    def validTranslation(self, TranslateInput, TranslateOutput):
+        if len(TranslateInput) != len(TranslateOutput):
             return False
-
         return True

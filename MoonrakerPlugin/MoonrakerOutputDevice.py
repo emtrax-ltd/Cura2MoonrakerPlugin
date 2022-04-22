@@ -8,9 +8,16 @@ from time import sleep
 
 from cura.CuraApplication import CuraApplication
 
-from PyQt5.QtCore import QByteArray, QObject, QUrl, QVariant
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest
+USE_QT5 = False
+try:
+    from PyQt6.QtCore import QByteArray, QObject, QUrl, QVariant
+    from PyQt6.QtGui import QDesktopServices
+    from PyQt6.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest, QNetworkReply
+except ImportError:
+    from PyQt5.QtCore import QByteArray, QObject, QUrl, QVariant
+    from PyQt5.QtGui import QDesktopServices
+    from PyQt5.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest, QNetworkReply
+    USE_QT5 = True
 
 from UM.Application import Application
 from UM.i18n import i18nCatalog
@@ -21,20 +28,23 @@ from UM.OutputDevice import OutputDeviceError
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.PluginRegistry import PluginRegistry
 
-from .MoonrakerSettings import get_config, save_config
+from .MoonrakerSettings import getConfig, saveConfig
 
 catalog = i18nCatalog("cura")
+spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 
 class OutputStage(Enum):
-    ready = 0
-    writing = 1
+    Ready = 0
+    Writing = 1
 
 class MoonrakerConfigureOutputDevice(OutputDevice):
     def __init__(self) -> None:
-        super().__init__("moonraker-configure")
+        super().__init__("MoonrakerConfigureOutputDevice")
         self.setShortDescription("Moonraker Plugin")
         self.setDescription("Configure Moonraker...")
         self.setPriority(0)
+
+        Logger.log("d", "MoonrakerConfigureOutputDevice created")
 
     def requestWrite(self, node, fileName = None, *args, **kwargs):
         message = Message("To configure your Moonraker printer go to:\n→ Settings\n  → Printer\n    → Manage Printers\n     → select your printer\n    → click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
@@ -42,59 +52,51 @@ class MoonrakerConfigureOutputDevice(OutputDevice):
         self.writeSuccess.emit(self)
 
 class MoonrakerOutputDevice(OutputDevice):
-    def __init__(self, config):
-        self._name_id = "moonraker-upload"
-        super().__init__(self._name_id)
-
-        self._url = config.get("url", "")
-        self._api_key = config.get("api_key", "")
-        self._power_device = config.get("power_device", "")
-        self._output_format = config.get("output_format", "gcode")
-        if self._output_format and self._output_format != "ufp":
-            self._output_format = "gcode"
-        self._upload_start_print_job = config.get("upload_start_print_job", False);
-        self._upload_remember_state = config.get("upload_remember_state", False);
-        self._upload_autohide_messagebox = config.get("upload_autohide_messagebox", False);
-        self._trans_input = config.get("trans_input", "")
-        self._trans_output = config.get("trans_output", "")
-        self._trans_remove = config.get("trans_remove", "")
-
-        self.application = CuraApplication.getInstance()
-        global_container_stack = self.application.getGlobalContainerStack()
-        self._name = global_container_stack.getName()
-
+    def __init__(self, config) -> None:
+        super().__init__("MoonrakerOutputDevice")
+        self._application = CuraApplication.getInstance()
+        self._name = self._application.getGlobalContainerStack().getName()
         description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
         self.setShortDescription(description)
         self.setDescription(description)
 
-        self._stage = OutputStage.ready
-        self._stream = None
+        self._url = config.get("url", "")
+        self._apiKey = config.get("api_key", "")
+        self._powerDevice = config.get("power_device", "")
+        self._outputFormat = config.get("output_format", "gcode")
+        if self._outputFormat and self._outputFormat != "ufp":
+            self._outputFormat = "gcode"
+        self._uploadStartPrintJob = config.get("upload_start_print_job", False)
+        self._uploadRememberState = config.get("upload_remember_state", False)
+        self._uploadAutohideMessagebox = config.get("upload_autohide_messagebox", False)
+        self._translateInput = config.get("trans_input", "")
+        self._translateOutput = config.get("trans_output", "")
+        self._translateRemove = config.get("trans_remove", "")
+
+        Logger.log("d", "MoonrakerOutputDevice created for printer... {}, URL: {}, API-Key: {}".format(self._name, self._url, self._apiKey))
         self._message = None
-
-        self._timeout_cnt = 0
-
-        Logger.log("d","New MoonrakerOutputDevice '{}' created | URL: {} | API-Key: {}".format(self._name_id, self._url, self._api_key,))
+        self._stream = None
         self._resetState()
 
-    def requestWrite(self, node, fileName = None, *args, **kwargs):
-        if self._stage != OutputStage.ready:
+    def requestWrite(self, node, fileName: str = None, *args, **kwargs) -> None:
+        if self._stage != OutputStage.Ready:
             raise OutputDeviceError.DeviceBusyError()
 
         # Make sure post-processing plugin are run on the gcode
         self.writeStarted.emit(self)
 
         # The presliced print should always be send using `GCodeWriter`
-        print_info = CuraApplication.getInstance().getPrintInformation()
-        if self._output_format != "ufp" or not print_info or print_info.preSliced:
-            self._output_format = "gcode"
-            code_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
+        printInformation = CuraApplication.getInstance().getPrintInformation()
+        if self._outputFormat != "ufp" or not printInformation or printInformation.preSliced:
+            self._outputFormat = "gcode"
+            meshWriter = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
             self._stream = StringIO()
         else:
-            code_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("UFPWriter"))
+            meshWriter = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("UFPWriter"))
             self._stream = BytesIO()
 
-        if not code_writer.write(self._stream, None):
-            Logger.log("e", "MeshWriter failed: %s" % code_writer.getInformation())
+        if not meshWriter.write(self._stream, None):
+            Logger.log("e", "MeshWriter failed: %s" % meshWriter.getInformation())
             return
 
         # Prepare filename for upload
@@ -104,26 +106,38 @@ class MoonrakerOutputDevice(OutputDevice):
             fileName = "%s." % Application.getInstance().getPrintInformation().jobName
         
         # Translate filename
-        if self._trans_input and self._trans_output:
-            transFileName = fileName.translate(fileName.maketrans(self._trans_input, self._trans_output, self._trans_remove if self._trans_remove else ""))
-            fileName = transFileName
+        if self._translateInput and self._translateOutput:
+            translatedFileName = fileName.translate(fileName.maketrans(self._translateInput, self._translateOutput, self._translateRemove if self._translateRemove else ""))
+            fileName = translatedFileName
 
-        self._fileName = fileName  + "." + self._output_format
+        self._fileName = fileName  + "." + self._outputFormat
 
         # Display upload dialog
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'MoonrakerUpload.qml')
-        self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
-        self._dialog.textChanged.connect(self.onFilenameChanged)
-        self._dialog.accepted.connect(self.onFilenameAccepted)
+        qmlUrl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerUpload.qml')
+        self._dialog = CuraApplication.getInstance().createQmlComponent(qmlUrl, {"manager": self})
+        self._dialog.textChanged.connect(self._onUploadFilenameChanged)
+        self._dialog.accepted.connect(self._onUploadFilenameAccepted)
         self._dialog.show()
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
-        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._output_format) - 1)
+        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._outputFormat) - 1)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
-        self._dialog.findChild(QObject, "printField").setProperty('checked', self._upload_start_print_job)
+        self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
 
-    def onFilenameChanged(self):
+    def _resetState(self) -> None:
+        Logger.log("d", "Reset state")
+        if self._stream:
+            self._stream.close()
+        self._stream = None
+        self._fileName = None
+        self._startPrint = None
+        self._postData = None
+        self._timeoutCounter = 0
+        self._stage = OutputStage.Ready
+
+    def _onUploadFilenameChanged(self) -> None:
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
 
+        # Check forbidden characters
         forbidden_characters = ":*?\"<>|"
         for forbidden_character in forbidden_characters:
             if forbidden_character in fileName:
@@ -131,174 +145,169 @@ class MoonrakerOutputDevice(OutputDevice):
                 self._dialog.setProperty('validationError', '*cannot contain {}'.format(forbidden_characters))
                 return
 
+        # Check forbidden filenames
         if fileName == '.' or fileName == '..':
             self._dialog.setProperty('validName', False)
             self._dialog.setProperty('validationError', '*cannot be "." or ".."')
             return
 
+        # Check length of filename
         self._dialog.setProperty('validName', len(fileName) > 0)
         self._dialog.setProperty('validationError', 'Filename too short')
 
-    def onFilenameAccepted(self):
+    def _onUploadFilenameAccepted(self) -> None:
+        # Resolve filename
         self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
-        if not self._fileName.endswith('.' + self._output_format) and '.' not in self._fileName:
-            self._fileName += '.' + self._output_format
+        if not self._fileName.endswith('.' + self._outputFormat) and '.' not in self._fileName:
+            self._fileName += '.' + self._outputFormat
         Logger.log("d", "Filename set to: " + self._fileName)
 
+        # Resolve start of print job
         self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
-        if self._upload_remember_state:
-            self._upload_start_print_job = self._startPrint
-            s = get_config()
-            s["upload_start_print_job"] = self._startPrint
-            save_config(s)
-        Logger.log("d", "Print set to: " + str(self._startPrint))
+        if self._uploadRememberState:
+            self._uploadStartPrintJob = self._startPrint
+            config = getConfig()
+            config["upload_start_print_job"] = self._startPrint
+            saveConfig(config)
+        Logger.log("d", "Start_Print set to: " + str(self._startPrint))
 
-        self._dialog.deleteLater()
-        
+        self._dialog.deleteLater()       
         Logger.log("d", "Connecting to Moonraker at {} ...".format(self._url))
-        # show a status message with spinner
-        messageText = self._getConnectMsgText()
+
+        # Show a message with status of connection
+        messageText = self._getConnectMessage()
         self._message = Message(catalog.i18nc("@info:status", messageText), 0, False)
+        self._message.setTitle("Moonraker - Connect")
         self._message.show()
 
-        if self._power_device:
-            self.getPrinterDeviceStatus()
+        # Handle power device first
+        if self._powerDevice:
+            self._getPowerDeviceStatus()
         else:
-            self.getPrinterInfo()
+            self._getPrinterStatus()
     
-    def checkPrinterState(self, reply=None):
-        if reply:
-            res = self._verifyReply(reply)
-            state = res['result']['state']
+    def _getPowerDeviceStatus(self) -> None:
+        powerDevice = self._powerDevice
+        if "," in powerDevice:
+            powerDevices = [x.strip() for x in powerDevice.split(',')]
+            powerDevice = powerDevices[0]
 
-            if self._startPrint:
-                if state == 'ready':
-                    # printer is online
-                    self.onInstanceOnline(reply)
-                else:
-                    self.handlePrinterConnection()
-            elif state != 'error':
-                # printer can queue job
-                self.onInstanceOnline(reply)
-            else: # set counter to max before call?
-                self.handlePrinterConnection()
+        Logger.log("d", "Checking printer device [power {}] status".format(powerDevice))
+        self._sendRequest('machine/device_power/device?device={}'.format(powerDevice), on_success = self._checkPowerDeviceStatus)
 
-    def checkPrinterDeviceStatus(self, reply):
-        if reply:
-            res = self._verifyReply(reply)
-            device = self._power_device
-            if "," in device:
-                devices = [x.strip() for x in self._power_device.split(',')]
-                device = devices[0]
+    def _checkPowerDeviceStatus(self, reply: QNetworkReply) -> None:
+        response = self._getResponse(reply)
+        powerDevice = self._powerDevice
+        if "," in powerDevice:
+            powerDevices = [x.strip() for x in powerDevice.split(',')]
+            powerDevice = powerDevices[0]
 
-            power_status = res['result'][device]
-            log_msg = "Power device [power {}] status == '{}';".format(device, power_status)
-            log_msg += " self._startPrint is {}".format(self._startPrint)
+        powerDevicesStatus = response['result'][powerDevice]
+        logMessage = "Power device [power {}] status == '{}'; self._startPrint is {} => ".format(powerDevice, powerDevicesStatus, self._startPrint)
 
-            if power_status == 'on':
-                log_msg += " Calling getPrinterInfo()"
-                Logger.log("d", log_msg)
-                self.getPrinterInfo()
-            elif power_status == 'off':
-                if self._startPrint:
-                    log_msg += " Calling postPrinterDevicePowerOn()"
-                    Logger.log("d", log_msg)
-                    self.postPrinterDevicePowerOn()
-                else:
-                    log_msg += " Sending FIRMWARE_RESTART before calling getPrinterInfo()"
-                    Logger.log("d", log_msg)
-                    postData = json.dumps({}).encode()
-                    self._sendRequest('printer/firmware_restart', data = postData, dataIsJSON = True, on_success = self.getPrinterInfo)
+        if powerDevicesStatus == 'on':               
+            Logger.log("d", logMessage + "Calling _getPrinterStatus()")
+            self._getPrinterStatus()
+        elif powerDevicesStatus == 'off':
+            if self._startPrint:                    
+                Logger.log("d", logMessage + "Calling _turnPowerDeviceOn()")
+                self._turnPowerDeviceOn()
+            else:
+                Logger.log("d", logMessage + "Sending FIRMWARE_RESTART before calling _getPrinterStatus()")
+                self._sendRequest('printer/firmware_restart', data = json.dumps({}).encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
 
-    def getPrinterDeviceStatus(self):
-        device = self._power_device
-        if "," in device:
-            devices = [x.strip() for x in self._power_device.split(',')]
-            device = devices[0]
-
-        Logger.log("d", "Checking printer device [power {}] status".format(device))
-        self._sendRequest('machine/device_power/device?device={}'.format(device), on_success = self.checkPrinterDeviceStatus)
-
-    def postPrinterDevicePowerOn(self, reply=None):
-        device = self._power_device
-        if "," in device:
-            devices = [x.strip() for x in self._power_device.split(',')]
-            for dev in devices:
-                Logger.log("d", "Turning on Moonraker power device [power {}]".format(dev))
-                postJSON = '{}'.encode()
-                params = {'device': dev, 'action': 'on'}
-                req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
-                self._sendRequest(req, data=postJSON, dataIsJSON=True, on_success=self.getPrinterInfo)
+    def _turnPowerDeviceOn(self) -> None:
+        powerDevice = self._powerDevice
+        if "," in powerDevice:
+            powerDevices = [x.strip() for x in powerDevice.split(',')]
+            for powerDevice in powerDevices:
+                Logger.log("d", "Turning on Moonraker power device [power {}]".format(powerDevice))
+                self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
         else:
-            Logger.log("d", "Turning on (single) Moonraker power device [power {}]".format(self._power_device))
-            postJSON = '{}'.encode()
-            params = {'device': self._power_device, 'action': 'on'}
-            req = 'machine/device_power/device?' + urllib.parse.urlencode(params)
-            self._sendRequest(req, data = postJSON, dataIsJSON = True, on_success = self.getPrinterInfo)
+            Logger.log("d", "Turning on (single) Moonraker power device [power {}]".format(powerDevice))
+            self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
 
-    def onMoonrakerConnectionTimeoutError(self):
-        messageText = "Error: Connection to Moonraker at {} timed out.".format(self._url)
-        self._message.setLifetimeTimer(0)
-        self._message.setText(messageText)
-            
-        browseMessageText = "Check your Moonraker and Klipper settings."
-        browseMessageText += "\nA FIRMWARE_RESTART may be necessary."
-        if self._power_device:
-            browseMessageText += "\nAlso check [power {}] stanza in moonraker.conf".format(self._power_device)
 
-        self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
-        self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
-        self._message.actionTriggered.connect(self._onMessageActionTriggered)
-        self._message.show()
-    
-        self.writeError.emit(self)
-        self._resetState()
+    def _getPrinterStatus(self, reply: QNetworkReply = None) -> None:
+        self._sendRequest('printer/info', on_success = self._checkPrinterStatus, on_error = self._onPrinterError)
 
-    def handlePrinterConnection(self, reply=None, error=None):
-        self._timeout_cnt += 1
-        timeout_cnt_max = 20
-        
-        if self._timeout_cnt > timeout_cnt_max:
-            self.onMoonrakerConnectionTimeoutError()
+    def _checkPrinterStatus(self, reply: QNetworkReply) -> None:
+        response = self._getResponse(reply)
+        status = response['result']['state']
+
+        if self._startPrint:
+            if status == 'ready':
+                # printer is online
+                self._onPrinterOnline(reply)
+            else:
+                # printer is not ready
+                self._onPrinterError()
+        elif status != 'error':
+            # moonraker can queue job
+            self._onPrinterOnline(reply)
         else:
-            sleep(0.5)
-            self._message.setText(self._getConnectMsgText())
-            self.getPrinterInfo()
+            # set counter to max before call?
+            self._onPrinterError()
 
-    def getPrinterInfo(self, reply=None):
-        self._sendRequest('printer/info', on_success = self.checkPrinterState, on_error = self.handlePrinterConnection)
-
-    def onInstanceOnline(self, reply):
+    def _onPrinterOnline(self, reply: QNetworkReply) -> None:
         # remove connection timeout message
-        self._timeout_cnt
+        self._timeoutCounter
         self._message.hide()
         self._message = None
 
-        self._stage = OutputStage.writing
+        self._stage = OutputStage.Writing
         # show a progress message
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
+        self._message.setTitle("Moonraker - Upload")
         self._message.show()
 
-        if self._stage != OutputStage.writing:
+        if self._stage != OutputStage.Writing:
             return # never gets here now?
-        if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", "Stopping due to reply error: " + reply.error())
+        if reply.error() != QNetworkReply.NetworkError.NoError:  # 0 == QtNetwork.NoError            
+            Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
             return
 
-        Logger.log("d", "Uploading " + self._output_format + "...")
+        Logger.log("d", "Uploading " + self._outputFormat + "...")
         self._stream.seek(0)
         self._postData = QByteArray()
         if isinstance(self._stream, BytesIO):
             self._postData.append(self._stream.getvalue())
         else:
             self._postData.append(self._stream.getvalue().encode())
-        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self.onCodeUploaded)    
+        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self._onFileUploaded)    
     
-    def onCodeUploaded(self, reply):
-        if self._stage != OutputStage.writing:
+    def _onPrinterError(self, reply: QNetworkReply = None, error = None) -> None:
+        self._timeoutCounter += 1
+        maxTimeoutCounterValue = 20
+        
+        if self._timeoutCounter > maxTimeoutCounterValue:
+            messageText = "Error: Connection to Moonraker at {} timed out.".format(self._url)
+            self._message.setLifetimeTimer(0)
+            self._message.setText(messageText)
+            self._message.setTitle("Moonraker - Error")
+            
+            browseMessageText = "Check your Moonraker and Klipper settings."
+            browseMessageText += "\nA FIRMWARE_RESTART may be necessary."
+            if self._powerDevice:
+                browseMessageText += "\nAlso check [power {}] in moonraker.conf".format(self._powerDevice)
+
+            self._message = Message(catalog.i18nc("@info:status", browseMessageText), 0, False)
+            self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
+            self._message.actionTriggered.connect(self._onMessageActionTriggered)
+            self._message.show()
+    
+            self.writeError.emit(self)
+            self._resetState()
+        else:
+            sleep(0.5)
+            self._message.setText(self._getConnectMessage())
+            self._getPrinterStatus()
+
+    def _onFileUploaded(self, reply: QNetworkReply) -> None:
+        if self._stage != OutputStage.Writing:
             return
-        if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", "Stopping due to reply error: " + reply.error())
+        if reply.error() != QNetworkReply.NetworkError.NoError: # 0 == QtNetwork.NoError            
+            Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
             return
 
         Logger.log("d", "Upload completed")
@@ -308,14 +317,13 @@ class MoonrakerOutputDevice(OutputDevice):
         if self._message:
             self._message.hide()
             self._message = None
-
         messageText = "Upload of '{}' to {} successfully completed"
-
         if self._startPrint:
            messageText += " and print job initialized."
         else:
            messageText += "."
-        self._message = Message(catalog.i18nc("@info:status", messageText.format(os.path.basename(self._fileName), self._name)), 30 if self._upload_autohide_messagebox else 0, True)
+        self._message = Message(catalog.i18nc("@info:status", messageText.format(os.path.basename(self._fileName), self._name)), 30 if self._uploadAutohideMessagebox else 0, True)
+        self._message.setTitle("Moonraker")
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to Moonraker."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
@@ -323,94 +331,51 @@ class MoonrakerOutputDevice(OutputDevice):
         self.writeSuccess.emit(self)
         self._resetState()
 
-    def _onProgress(self, progress):
-        if self._message:
-            self._message.setProgress(progress)
-        self.writeProgress.emit(self, progress)
-
-    def _getConnectMsgText(self):
-        spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-        return "Connecting to Moonraker at {}     {}".format(self._url, spinner[self._timeout_cnt % len(spinner)])
-
-    def _resetState(self):
-        Logger.log("d", "Reset state")
-        if self._stream:
-            self._stream.close()
-        self._stream = None
-        self._stage = OutputStage.ready
-        self._fileName = None
-        self._startPrint = None
-        self._postData = None
-        self._timeout_cnt = 0
-
-    def _onMessageActionTriggered(self, message, action):
+    def _onMessageActionTriggered(self, message: Message, action: str) -> None:
         if action == "open_browser":
             QDesktopServices.openUrl(QUrl(self._url))
             if self._message:
                 self._message.hide()
                 self._message = None
 
-    def _onUploadProgress(self, bytesSent, bytesTotal):
-        if bytesTotal > 0:
-            self._onProgress(int(bytesSent * 100 / bytesTotal))
-
-    def _onNetworkError(self, reply, error):
-        Logger.log("e", repr(error))
-        if self._message:
-            self._message.hide()
-            self._message = None
-
-        errorString = ''
-        if reply:
-            errorString = reply.errorString()
-
-        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(error, errorString), 0, False)
-        message.show()
-
-        self.writeError.emit(self)
-        self._resetState()
-    
-    def _verifyReply(self, reply):
-        # Logger.log("d", "reply: %s" % str(byte_string, 'utf-8'))
-
+    def _getResponse(self, reply: QNetworkReply):
         byte_string = reply.readAll()
         response = ''
         try:
             response = json.loads(str(byte_string, 'utf-8'))
         except json.JSONDecodeError:
             Logger.log("d", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
-            self.handlePrinterConnection()
+            self._onPrinterError()
 
         return response
 
-    def _sendRequest(self, path, name = None, data = None, dataIsJSON = False, on_success = None, on_error = None):
+    def _sendRequest(self, path: str, name: str = None, data: QByteArray = None, dataIsJSON: bool = False, on_success = None, on_error = None) -> None:
         url = self._url + path
 
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
-
-        if self._api_key:
-            headers['X-API-Key'] = self._api_key
+        if self._apiKey:
+            headers['X-API-Key'] = self._apiKey
 
         postData = data
         if data is not None:
             if not dataIsJSON:
                 # Create multi_part request           
-                parts = QHttpMultiPart(QHttpMultiPart.FormDataType)
+                parts = QHttpMultiPart(QHttpMultiPart.ContentType.FormDataType)
 
                 part_file = QHttpPart()
-                part_file.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
-                part_file.setHeader(QNetworkRequest.ContentTypeHeader, QVariant('application/octet-stream'))
+                part_file.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
+                part_file.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, QVariant('application/octet-stream'))
                 part_file.setBody(data)
                 parts.append(part_file)
 
                 part_root = QHttpPart()
-                part_root.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="root"'))
+                part_root.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="root"'))
                 part_root.setBody(b"gcodes")
                 parts.append(part_root)
 
                 if self._startPrint:
                     part_print = QHttpPart()
-                    part_print.setHeader(QNetworkRequest.ContentDispositionHeader, QVariant('form-data; name="print"'))
+                    part_print.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="print"'))
                     part_print.setBody(b"true")
                     parts.append(part_print)
 
@@ -421,6 +386,29 @@ class MoonrakerOutputDevice(OutputDevice):
                 # postData is JSON
                 headers['Content-Type'] = 'application/json'
 
-            self.application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onNetworkError, upload_progress_callback = self._onUploadProgress if not dataIsJSON else None)
+            self._application.getHttpRequestManager().post(url, headers, postData, callback = on_success, error_callback = on_error if on_error else self._onRequestError, upload_progress_callback = self._onUploadProgress if not dataIsJSON else None)
         else:
-            self.application.getHttpRequestManager().get(url, headers, callback = on_success, error_callback = on_error if on_error else self._onNetworkError)
+            self._application.getHttpRequestManager().get(url, headers, callback = on_success, error_callback = on_error if on_error else self._onRequestError)
+
+    def _onUploadProgress(self, bytesSent, bytesTotal) -> None:
+        if bytesTotal > 0:
+            progress = int(bytesSent * 100 / bytesTotal)
+            if self._message:
+                self._message.setProgress(progress)
+            self.writeProgress.emit(self, progress)
+
+    def _onRequestError(self, reply: QNetworkReply, error) -> None:
+        Logger.log("e", repr(error))
+        if self._message:
+            self._message.hide()
+            self._message = None
+
+        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(error, reply.errorString() if reply else ""), 0, False)
+        message.setTitle("Moonraker - Error")
+        message.show()
+
+        self.writeError.emit(self)
+        self._resetState()
+    
+    def _getConnectMessage(self):
+        return "Connecting to Moonraker at {}     {}".format(self._url, spinner[self._timeoutCounter % len(spinner)])

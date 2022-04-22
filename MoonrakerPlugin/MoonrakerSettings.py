@@ -1,46 +1,48 @@
 import json
+from enum import Enum
 
 from cura.CuraApplication import CuraApplication
 
+from UM.Logger import Logger
+
 MOONRAKER_SETTINGS = "moonraker/instances"
 
-def _load_prefs():
+def _loadConfig():
     application = CuraApplication.getInstance()
-    global_container_stack = application.getGlobalContainerStack()
-    if not global_container_stack:
+    globalContainerStack = application.getGlobalContainerStack()
+    if not globalContainerStack:
         return {}, None
-    printer_id = global_container_stack.getId()
-    p = application.getPreferences()
-    s = json.loads(p.getValue(MOONRAKER_SETTINGS))
-    return s, printer_id
+    printerId = globalContainerStack.getId()
+    preferences = application.getPreferences()
+    settings = json.loads(preferences.getValue(MOONRAKER_SETTINGS))
+    return settings, printerId
 
-def init_config():
-    application = CuraApplication.getInstance()
-    p = application.getPreferences()
-    p.addPreference(MOONRAKER_SETTINGS, json.dumps({}))
-
-def get_config():
-    s, printer_id = _load_prefs()
-    if printer_id in s:
-        return s[printer_id]
+def getConfig():
+    settings, printerId = _loadConfig()
+    if printerId in settings:
+        return settings[printerId]
     return {}
 
-def save_config(conf):
-    s, printer_id = _load_prefs()
-    s[printer_id] = conf
-    application = CuraApplication.getInstance()
-    p = application.getPreferences()
-    p.setValue(MOONRAKER_SETTINGS, json.dumps(s))
-    return s
+def saveConfig(config):
+    settings, printerId = _loadConfig()
+    Logger.log("d", "MoonrakerSettings save config for printer... id:{}".format(printerId))
 
-def delete_config(printer_id=None):
-    s, active_printer_id = _load_prefs()
-    if not printer_id:
-        printer_id = active_printer_id
-    if printer_id in s:
-        del s[printer_id]
+    settings[printerId] = config
+    application = CuraApplication.getInstance()
+    preferences = application.getPreferences()
+    preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
+    return settings
+
+def deleteConfig(printerId = None):
+    settings, activePrinterId = _loadConfig()
+    if not printerId:
+        printerId = activePrinterId
+
+    Logger.log("d", "MoonrakerSettings delete config for printer... id:{}".format(printerId))
+    if printerId in settings:
+        del settings[printerId]
         application = CuraApplication.getInstance()
-        p = application.getPreferences()
-        p.setValue(MOONRAKER_SETTINGS, json.dumps(s))
+        preferences = application.getPreferences()
+        preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
         return True
     return False
