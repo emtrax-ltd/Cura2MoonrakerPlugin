@@ -17,6 +17,11 @@ def _loadConfig():
     settings = json.loads(preferences.getValue(MOONRAKER_SETTINGS))
     return settings, printerId
 
+def initConfig():
+    application = CuraApplication.getInstance()
+    preferences = application.getPreferences()
+    preferences.addPreference(MOONRAKER_SETTINGS, json.dumps({}))
+
 def getConfig():
     settings, printerId = _loadConfig()
     if printerId in settings:

@@ -37,48 +37,22 @@ class OutputStage(Enum):
     Ready = 0
     Writing = 1
 
-class MoonrakerConfigureOutputDevice(OutputDevice):
-    def __init__(self) -> None:
-        super().__init__("MoonrakerConfigureOutputDevice")
-        self.setShortDescription("Moonraker Plugin")
-        self.setDescription("Configure Moonraker...")
-        self.setPriority(0)
-
-        Logger.log("d", "MoonrakerConfigureOutputDevice created")
-
-    def requestWrite(self, node, fileName = None, *args, **kwargs):
-        message = Message("To configure your Moonraker printer go to:\n→ Settings\n  → Printer\n    → Manage Printers\n     → select your printer\n    → click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
-        message.show()
-        self.writeSuccess.emit(self)
-
 class MoonrakerOutputDevice(OutputDevice):
-    def __init__(self, config) -> None:
+    def __init__(self) -> None:
         super().__init__("MoonrakerOutputDevice")
         self._application = CuraApplication.getInstance()
-        self._name = self._application.getGlobalContainerStack().getName()
-        description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
-        self.setShortDescription(description)
-        self.setDescription(description)
-
-        self._url = config.get("url", "")
-        self._apiKey = config.get("api_key", "")
-        self._powerDevice = config.get("power_device", "")
-        self._outputFormat = config.get("output_format", "gcode")
-        if self._outputFormat and self._outputFormat != "ufp":
-            self._outputFormat = "gcode"
-        self._uploadStartPrintJob = config.get("upload_start_print_job", False)
-        self._uploadRememberState = config.get("upload_remember_state", False)
-        self._uploadAutohideMessagebox = config.get("upload_autohide_messagebox", False)
-        self._translateInput = config.get("trans_input", "")
-        self._translateOutput = config.get("trans_output", "")
-        self._translateRemove = config.get("trans_remove", "")
-
-        Logger.log("d", "MoonrakerOutputDevice created for printer... {}, URL: {}, API-Key: {}".format(self._name, self._url, self._apiKey))
-        self._message = None
-        self._stream = None
-        self._resetState()
-
+        self._config = None
+        self._printerId = None
+        self._stage = OutputStage.Ready
+        Logger.log("d", "MoonrakerOutputDevice created")
+        
     def requestWrite(self, node, fileName: str = None, *args, **kwargs) -> None:
+        if not self._config:
+            message = Message("To configure your Moonraker printer go to:\n→ Settings\n→ Printer\n→ Manage Printers\n→ select your printer\n→ click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
+            message.show()
+            self.writeSuccess.emit(self)
+            return
+
         if self._stage != OutputStage.Ready:
             raise OutputDeviceError.DeviceBusyError()
 
@@ -122,6 +96,46 @@ class MoonrakerOutputDevice(OutputDevice):
         self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._outputFormat) - 1)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
         self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
+
+    def getPrinterId(self):
+        return self._printerId
+
+    def getConfig(self):
+        return self._config
+
+    def initConfig(self) -> None:
+        if self._stage != OutputStage.Ready:
+            raise OutputDeviceError.DeviceBusyError();
+
+        self._printerId = self._application.getGlobalContainerStack().getId()
+        self._name = self._application.getGlobalContainerStack().getName()
+        self._config = getConfig()
+        if self._config:
+            description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
+            self.setShortDescription(description)
+            self.setDescription(description)
+
+            self._url = self._config.get("url", "")
+            self._apiKey = self._config.get("api_key", "")
+            self._powerDevice = self._config.get("power_device", "")
+            self._outputFormat = self._config.get("output_format", "gcode")
+            if self._outputFormat and self._outputFormat != "ufp":
+                self._outputFormat = "gcode"
+            self._uploadStartPrintJob = self._config.get("upload_start_print_job", False)
+            self._uploadRememberState = self._config.get("upload_remember_state", False)
+            self._uploadAutohideMessagebox = self._config.get("upload_autohide_messagebox", False)
+            self._translateInput = self._config.get("trans_input", "")
+            self._translateOutput = self._config.get("trans_output", "")
+            self._translateRemove = self._config.get("trans_remove", "")
+            Logger.log("d", "MoonrakerOutputDevice initialized for printer... {}, URL: {}, API-Key: {}".format(self._name, self._url, self._apiKey))
+        else:
+            self.setShortDescription("Moonraker Plugin")
+            self.setDescription("Configure Moonraker...")
+            Logger.log("d", "MoonrakerOutputDevice not configured for printer... {}".format(self._name))
+    
+        self._message = None
+        self._stream = None
+        self._resetState()
 
     def _resetState(self) -> None:
         Logger.log("d", "Reset state")
@@ -265,6 +279,7 @@ class MoonrakerOutputDevice(OutputDevice):
             return # never gets here now?
         if reply.error() != QNetworkReply.NetworkError.NoError:  # 0 == QtNetwork.NoError            
             Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
+            self._onRequestError(reply)
             return
 
         Logger.log("d", "Uploading " + self._outputFormat + "...")
@@ -308,6 +323,7 @@ class MoonrakerOutputDevice(OutputDevice):
             return
         if reply.error() != QNetworkReply.NetworkError.NoError: # 0 == QtNetwork.NoError            
             Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
+            self._onRequestError(reply)
             return
 
         Logger.log("d", "Upload completed")
