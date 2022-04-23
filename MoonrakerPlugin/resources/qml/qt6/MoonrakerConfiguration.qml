@@ -254,7 +254,7 @@ Cura.MachineAction {
                                 text: manager.settingsTranslateOutput
                                 width: parent.width
                                 maximumLength: 128
-                                onTextChanged: base.validTranslation = manager.validTranslation(transInputField.text, transOutputField.text)
+                                onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
                                 onEditingFinished: { updateConfig() }
                             }
                         }
