@@ -14,7 +14,10 @@ def _loadConfig():
         return {}, None
     printerId = globalContainerStack.getId()
     preferences = application.getPreferences()
-    settings = json.loads(preferences.getValue(MOONRAKER_SETTINGS))
+    configs = preferences.getValue(MOONRAKER_SETTINGS)
+    if not configs:
+        return {}, None
+    settings = json.loads(configs)
     return settings, printerId
 
 def getConfig():
