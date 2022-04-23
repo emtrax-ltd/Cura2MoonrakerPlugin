@@ -74,7 +74,7 @@ class MoonrakerAction(MachineAction):
     @pyqtProperty(str, notify = settingsUrlChanged)
     def settingsUrl(self) -> Optional[str]:
         config = getConfig()
-        return config.get("url", "") if config else "x"
+        return config.get("url", "") if config else ""
 
     @pyqtProperty(str, notify = settingsApiKeyChanged)
     def settingsApiKey(self) -> Optional[str]:
