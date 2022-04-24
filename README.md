@@ -1,4 +1,4 @@
-# Klipper & Cura - Cura2MoonrakerPlugin
+# Cura & Klipper - MoonrakerPlugin
 - Allows you to upload Gcode directly from Cura to your Klipper-based 3D printer (Fluidd, Mainsailos etc.) using the Moonraker API.
 - Uploading thumbnails via UFP (Ultimaker Format Package) is supported
 - You can also start a print job using the upload process
