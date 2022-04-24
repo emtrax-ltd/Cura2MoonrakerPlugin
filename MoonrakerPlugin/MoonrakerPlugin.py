@@ -30,7 +30,7 @@ class MoonrakerPlugin(Extension, OutputDevicePlugin):
         outputDeviceManager = self.getOutputDeviceManager()
         moonrakerOutputDevice = cast(MoonrakerOutputDevice, outputDeviceManager.getOutputDevice("MoonrakerOutputDevice"))
         if  not moonrakerOutputDevice:
-            Logger.log("d", "MoonrakerPlugin is now adding MoonrakerOutputDevice")
+            Logger.log("i", "MoonrakerPlugin is now adding MoonrakerOutputDevice")
             moonrakerOutputDevice = MoonrakerOutputDevice()
             outputDeviceManager.addOutputDevice(moonrakerOutputDevice)
         if moonrakerOutputDevice.getPrinterId() != globalContainerStack.getId() or moonrakerOutputDevice.getConfig() != getConfig():

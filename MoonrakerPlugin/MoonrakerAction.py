@@ -1,6 +1,5 @@
 import os
 import json
-import re
 from typing import Dict, Type, TYPE_CHECKING, List, Optional, cast
 
 USE_QT5 = False
@@ -20,7 +19,7 @@ from UM.i18n import i18nCatalog
 
 catalog = i18nCatalog("cura")
 
-from .MoonrakerSettings import getConfig, saveConfig, deleteConfig
+from .MoonrakerSettings import getConfig, saveConfig, deleteConfig, validateUrl, validateTranslation
 
 class MoonrakerAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
@@ -139,20 +138,9 @@ class MoonrakerAction(MachineAction):
             Logger.log("d", "no config to delete")
 
     @pyqtSlot(str, result = bool)
-    def validUrl(self, url):
-        if url.startswith('\\\\'):
-            # no UNC paths
-            return False
-        if not re.match('^https?://.', url):
-            # missing https?://
-            return False
-        if '@' in url:
-            # @ is probably HTTP basic auth, which is a separate setting
-            return False
-        return True
+    def validUrl(self, url) -> bool:
+        return validateUrl(url)
 
     @pyqtSlot(str, str, result = bool)
-    def validTranslation(self, TranslateInput, TranslateOutput):
-        if len(TranslateInput) != len(TranslateOutput):
-            return False
-        return True
+    def validTranslation(self, translateInput, translateOutput) -> bool:
+        return validateTranslation(translateInput, translateOutput)

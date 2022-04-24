@@ -1,3 +1,4 @@
+import re
 import json
 from enum import Enum
 
@@ -14,10 +15,7 @@ def _loadConfig():
         return {}, None
     printerId = globalContainerStack.getId()
     preferences = application.getPreferences()
-    configs = preferences.getValue(MOONRAKER_SETTINGS)
-    if not configs:
-        return {}, None
-    settings = json.loads(configs)
+    settings = json.loads(preferences.getValue(MOONRAKER_SETTINGS))
     return settings, printerId
 
 def initConfig():
@@ -25,15 +23,15 @@ def initConfig():
     preferences = application.getPreferences()
     preferences.addPreference(MOONRAKER_SETTINGS, json.dumps({}))
 
-def getConfig():
+def getConfig() -> dict:
     settings, printerId = _loadConfig()
     if printerId in settings:
         return settings[printerId]
     return {}
 
-def saveConfig(config):
+def saveConfig(config: dict) -> dict:
     settings, printerId = _loadConfig()
-    Logger.log("d", "MoonrakerSettings save config for printer... id:{}".format(printerId))
+    Logger.log("i", "MoonrakerSettings save config for printer... id:{}".format(printerId))
 
     settings[printerId] = config
     application = CuraApplication.getInstance()
@@ -41,12 +39,12 @@ def saveConfig(config):
     preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
     return settings
 
-def deleteConfig(printerId = None):
+def deleteConfig(printerId: str = None) -> bool:
     settings, activePrinterId = _loadConfig()
     if not printerId:
         printerId = activePrinterId
 
-    Logger.log("d", "MoonrakerSettings delete config for printer... id:{}".format(printerId))
+    Logger.log("i", "MoonrakerSettings delete config for printer... id:{}".format(printerId))
     if printerId in settings:
         del settings[printerId]
         application = CuraApplication.getInstance()
@@ -54,3 +52,22 @@ def deleteConfig(printerId = None):
         preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
         return True
     return False
+
+def validateUrl(url: str = None) -> bool:
+    if not url:
+        return False
+    if url.startswith('\\\\'):
+        # no UNC paths
+        return False
+    if not re.match('^https?://.', url):
+        # missing https?://
+        return False
+    if '@' in url:
+        # @ is probably HTTP basic auth, which is a separate setting
+        return False
+    return True
+
+def validateTranslation(translateInput: str = None, translateOutput: str = None) -> bool:
+    if len(translateInput) != len(translateOutput):
+        return False
+    return True

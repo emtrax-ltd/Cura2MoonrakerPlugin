@@ -28,7 +28,7 @@ from UM.OutputDevice import OutputDeviceError
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.PluginRegistry import PluginRegistry
 
-from .MoonrakerSettings import getConfig, saveConfig
+from .MoonrakerSettings import getConfig, saveConfig, validateUrl
 
 catalog = i18nCatalog("cura")
 spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
@@ -47,7 +47,7 @@ class MoonrakerOutputDevice(OutputDevice):
         Logger.log("d", "MoonrakerOutputDevice created")
         
     def requestWrite(self, node, fileName: str = None, *args, **kwargs) -> None:
-        if not self._config:
+        if not self._config or not validateUrl(self._config.get("url", "")):
             message = Message("To configure your Moonraker printer go to:\n→ Settings\n→ Printer\n→ Manage Printers\n→ select your printer\n→ click on 'Connect Moonraker'", lifetime = 0, title = "Configure Moonraker in Preferences!")
             message.show()
             self.writeSuccess.emit(self)
@@ -110,7 +110,7 @@ class MoonrakerOutputDevice(OutputDevice):
         self._printerId = self._application.getGlobalContainerStack().getId()
         self._name = self._application.getGlobalContainerStack().getName()
         self._config = getConfig()
-        if self._config:
+        if self._config and validateUrl(self._config.get("url", "")):
             description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
             self.setShortDescription(description)
             self.setDescription(description)
@@ -127,11 +127,11 @@ class MoonrakerOutputDevice(OutputDevice):
             self._translateInput = self._config.get("trans_input", "")
             self._translateOutput = self._config.get("trans_output", "")
             self._translateRemove = self._config.get("trans_remove", "")
-            Logger.log("d", "MoonrakerOutputDevice initialized for printer... {}, URL: {}, API-Key: {}".format(self._name, self._url, self._apiKey))
+            Logger.log("i", "MoonrakerOutputDevice initialized for printer... {}, URL: {}, API-Key: {}".format(self._name, self._url, self._apiKey))
         else:
             self.setShortDescription("Moonraker Plugin")
             self.setDescription("Configure Moonraker...")
-            Logger.log("d", "MoonrakerOutputDevice not configured for printer... {}".format(self._name))
+            Logger.log("i", "MoonrakerOutputDevice not configured for printer... {}".format(self._name))
     
         self._message = None
         self._stream = None
@@ -186,7 +186,7 @@ class MoonrakerOutputDevice(OutputDevice):
         Logger.log("d", "Start_Print set to: " + str(self._startPrint))
 
         self._dialog.deleteLater()       
-        Logger.log("d", "Connecting to Moonraker at {} ...".format(self._url))
+        Logger.log("i", "Connecting to Moonraker at {} ...".format(self._url))
 
         # Show a message with status of connection
         messageText = self._getConnectMessage()
@@ -235,10 +235,10 @@ class MoonrakerOutputDevice(OutputDevice):
         if "," in powerDevice:
             powerDevices = [x.strip() for x in powerDevice.split(',')]
             for powerDevice in powerDevices:
-                Logger.log("d", "Turning on Moonraker power device [power {}]".format(powerDevice))
+                Logger.log("i", "Turning on Moonraker power device [power {}]".format(powerDevice))
                 self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
         else:
-            Logger.log("d", "Turning on (single) Moonraker power device [power {}]".format(powerDevice))
+            Logger.log("i", "Turning on (single) Moonraker power device [power {}]".format(powerDevice))
             self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
 
 
@@ -265,7 +265,6 @@ class MoonrakerOutputDevice(OutputDevice):
 
     def _onPrinterOnline(self, reply: QNetworkReply) -> None:
         # remove connection timeout message
-        self._timeoutCounter
         self._message.hide()
         self._message = None
 
@@ -278,11 +277,11 @@ class MoonrakerOutputDevice(OutputDevice):
         if self._stage != OutputStage.Writing:
             return # never gets here now?
         if reply.error() != QNetworkReply.NetworkError.NoError:  # 0 == QtNetwork.NoError            
-            Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
+            Logger.log("e", "Stopping due to reply error: {}".format(reply.error()))
             self._onRequestError(reply)
             return
 
-        Logger.log("d", "Uploading " + self._outputFormat + "...")
+        Logger.log("i", "Uploading {} [{}] ...".format(self._fileName, self._outputFormat))
         self._stream.seek(0)
         self._postData = QByteArray()
         if isinstance(self._stream, BytesIO):
@@ -322,11 +321,11 @@ class MoonrakerOutputDevice(OutputDevice):
         if self._stage != OutputStage.Writing:
             return
         if reply.error() != QNetworkReply.NetworkError.NoError: # 0 == QtNetwork.NoError            
-            Logger.log("d", "Stopping due to reply error: {}".format(reply.error()))
+            Logger.log("e", "Stopping due to reply error: {}".format(reply.error()))
             self._onRequestError(reply)
             return
 
-        Logger.log("d", "Upload completed")
+        Logger.log("i", "Upload completed")
         self._stream.close()
         self._stream = None
 
@@ -360,7 +359,7 @@ class MoonrakerOutputDevice(OutputDevice):
         try:
             response = json.loads(str(byte_string, 'utf-8'))
         except json.JSONDecodeError:
-            Logger.log("d", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
+            Logger.log("e", "Reply is not a JSON: %s" % str(byte_string, 'utf-8'))
             self._onPrinterError()
 
         return response
