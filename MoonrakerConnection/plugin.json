@@ -1,7 +1,7 @@
 {
-    "name": "Moonraker Connection",
+    "name": "Klipper/Moonraker Connection",
     "author": "emtrax",
     "description": "Upload and Print with Klipper via Moonraker API.",
-    "version": "1.5.3",
+    "version": "1.6.0",
     "supported_sdk_versions": ["7.3.0", "7.4.0", "7.5.0", "8.0.0"]
 }
