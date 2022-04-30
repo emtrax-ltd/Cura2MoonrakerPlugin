@@ -424,7 +424,7 @@ Cura.MachineAction {
                             x: 15
 
                             Label {
-                                text: catalog.i18nc("@label", "Camera (URL)")
+                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-Url)")
                                 font: UM.Theme.getFont("default")
                                 color: UM.Theme.getColor("text")
                                 renderType: Text.NativeRendering

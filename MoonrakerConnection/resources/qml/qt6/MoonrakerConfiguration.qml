@@ -387,7 +387,7 @@ Cura.MachineAction {
                             x: 15
 
                             UM.Label {
-                                text: catalog.i18nc("@label", "Camera (URL)")
+                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-Url)")
                             }
                         }
                         Cura.TextField {

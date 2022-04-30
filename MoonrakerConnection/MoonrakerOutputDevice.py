@@ -118,9 +118,10 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
         if self._config != config:
             self._config = config
-            self._url = self._config.get("url", "")
-            self._apiKey = self._config.get("api_key", "")
-            self._powerDevice = self._config.get("power_device", "")
+            # Resolve config items
+            self._url = self._config.get("url", "").strip()
+            self._apiKey = self._config.get("api_key", "").strip()
+            self._powerDevice = self._config.get("power_device", "").strip()
             self._outputFormat = self._config.get("output_format", "gcode")
             if self._outputFormat and self._outputFormat != "ufp":
                 self._outputFormat = "gcode"
@@ -130,10 +131,25 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._translateInput = self._config.get("trans_input", "")
             self._translateOutput = self._config.get("trans_output", "")
             self._translateRemove = self._config.get("trans_remove", "")
-            self._cameraUrl = self._config.get("camera_url", "")
-            self.activePrinter.setCameraUrl(QUrl(self._cameraUrl))
-            self._address = self._url
+            self._cameraUrl = self._config.get("camera_url", "").strip()
 
+            # Configure address and webcam
+            self._address = self._url            
+            if self._cameraUrl != "":
+                cameraUrl = QUrl(self._cameraUrl)
+                if cameraUrl.isRelative():
+                    _cameraUrl = QUrl(self._address)
+                    _cameraUrl.setQuery(cameraUrl.query())
+                    if cameraUrl.path().startswith("/"):
+                        _cameraUrl.setPath(cameraUrl.path())
+                    else:
+                        _cameraUrl.setPath(_cameraUrl.path() + cameraUrl.path())
+                    cameraUrl = _cameraUrl
+                self.activePrinter.setCameraUrl(cameraUrl)
+            else:
+                self.activePrinter.setCameraUrl(QUrl())
+
+            # Configure ui components
             globalContainerStack = CuraApplication.getInstance().getGlobalContainerStack()
             self.setName(globalContainerStack.getName())
             self._canConnect = True if self._connection_type == ConnectionType.NetworkConnection and validateUrl(self._url) else False
@@ -148,7 +164,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             else:
                 self.setDescription("Configure Moonraker Connection...")
                 self.setShortDescription("Moonraker Connection")
-                self.setConnectionText(catalog.i18nc("@info:status", "Not connected via Moonraker"))
+                self.setConnectionText(catalog.i18nc("@info:status", "Not connected"))
                 self.setPriority(0)
                 Logger.log("i", "No valid configuration for printer '{}' found.".format(globalContainerStack.getId()))
 

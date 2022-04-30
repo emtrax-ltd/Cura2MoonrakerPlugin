@@ -31,13 +31,26 @@ Component {
 
             UM.Label {
                 id: cameraLabel
+
                 anchors {
                     horizontalCenter: parent.horizontalCenter;
                     verticalCenter: parent.verticalCenter;
                 }
-                color: UM.Theme.getColor(OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null ? "text" : "text_inactive")
+                color: UM.Theme.getColor(OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != "" ? "text" : "text_inactive")
                 font: UM.Theme.getFont("large_bold")
                 text: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != "" ? "Camera" : "Camera not configured"
+            }
+            UM.Label {                
+                id: cameraLabelUrl
+
+                visible: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != ""
+                anchors {
+                    horizontalCenter: cameraLabel.horizontalCenter;
+                    top: cameraLabel.bottom;
+                }
+                color: UM.Theme.getColor("text_inactive")
+                font: UM.Theme.getFont("small")
+                text: "Url: " + (OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null ? OutputDevice.activePrinter.cameraUrl : "Null")
             }
 
             Cura.NetworkMJPGImage { 
