@@ -19,23 +19,22 @@ def _loadConfig():
     return settings, printerId
 
 def initConfig():
-    application = CuraApplication.getInstance()
-    preferences = application.getPreferences()
+    preferences = CuraApplication.getInstance().getPreferences()
     preferences.addPreference(MOONRAKER_SETTINGS, json.dumps({}))
 
 def getConfig() -> dict:
     settings, printerId = _loadConfig()
+    
     if printerId in settings:
         return settings[printerId]
     return {}
 
 def saveConfig(config: dict) -> dict:
     settings, printerId = _loadConfig()
-    Logger.log("i", "MoonrakerSettings save config for printer... id:{}".format(printerId))
 
+    Logger.log("i", "MoonrakerSettings save config for printer... id:{}".format(printerId))
     settings[printerId] = config
-    application = CuraApplication.getInstance()
-    preferences = application.getPreferences()
+    preferences = CuraApplication.getInstance().getPreferences()
     preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
     return settings
 
@@ -47,8 +46,7 @@ def deleteConfig(printerId: str = None) -> bool:
     Logger.log("i", "MoonrakerSettings delete config for printer... id:{}".format(printerId))
     if printerId in settings:
         del settings[printerId]
-        application = CuraApplication.getInstance()
-        preferences = application.getPreferences()
+        preferences = CuraApplication.getInstance().getPreferences()
         preferences.setValue(MOONRAKER_SETTINGS, json.dumps(settings))
         return True
     return False

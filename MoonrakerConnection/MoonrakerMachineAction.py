@@ -21,14 +21,12 @@ catalog = i18nCatalog("cura")
 
 from .MoonrakerSettings import getConfig, saveConfig, deleteConfig, validateUrl, validateTranslation
 
-class MoonrakerAction(MachineAction):
+class MoonrakerMachineAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
-        super().__init__("MoonrakerAction", catalog.i18nc("@action", "Connect Moonraker"))
+        super().__init__("MoonrakerMachineAction", catalog.i18nc("@action", "Connect Moonraker"))
         self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerConfiguration.qml')
-
-        self._application = CuraApplication.getInstance()
-        self._application.globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
-        ContainerRegistry.getInstance().containerAdded.connect(self._onContainerAdded)
+        CuraApplication.getInstance().globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
+        CuraApplication.getInstance().getContainerRegistry().containerAdded.connect(self._onContainerAdded)
 
     def _onGlobalContainerStackChanged(self) -> None:
         self.settingsUrlChanged.emit()
@@ -40,14 +38,12 @@ class MoonrakerAction(MachineAction):
         self.settingsTranslateInputChanged.emit()
         self.settingsTranslateOutputChanged.emit()
         self.settingsTranslateRemoveChanged.emit()
-
-    def _onContainerAdded(self, container: "ContainerInterface") -> None:
+        self.settingsCameraUrlChanged.emit()
+ 
+    def _onContainerAdded(self, container) -> None:
         # Add this action as a supported action to all machine definitions
-        if (
-            isinstance(container, DefinitionContainer) and
-            container.getMetaDataEntry("type") == "machine" 
-        ):
-            self._application.getMachineActionManager().addSupportedAction(container.getId(), self.getKey())
+        if isinstance(container, DefinitionContainer) and container.getMetaDataEntry("type") == "machine":
+            CuraApplication.getInstance().getMachineActionManager().addSupportedAction(container.getId(), self.getKey())
 
     def _reset(self) -> None:
         self.settingsUrlChanged.emit()
@@ -59,6 +55,7 @@ class MoonrakerAction(MachineAction):
         self.settingsTranslateInputChanged.emit()
         self.settingsTranslateOutputChanged.emit()
         self.settingsTranslateRemoveChanged.emit()
+        self.settingsCameraUrlChanged.emit()
 
     settingsUrlChanged = pyqtSignal()
     settingsApiKeyChanged = pyqtSignal()
@@ -69,6 +66,7 @@ class MoonrakerAction(MachineAction):
     settingsTranslateInputChanged = pyqtSignal()
     settingsTranslateOutputChanged = pyqtSignal()
     settingsTranslateRemoveChanged = pyqtSignal()
+    settingsCameraUrlChanged = pyqtSignal()
 
     @pyqtProperty(str, notify = settingsUrlChanged)
     def settingsUrl(self) -> Optional[str]:
@@ -115,6 +113,12 @@ class MoonrakerAction(MachineAction):
         config = getConfig()
         return config.get("trans_remove", "") if config else ""
 
+    @pyqtProperty(str, notify = settingsCameraUrlChanged)
+    def settingsCameraUrl(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("camera_url", "") if config else ""
+
+
     @pyqtSlot(QVariant)
     def saveConfig(self, paramsQJSValObj):
         oldConfig = getConfig()
@@ -126,14 +130,14 @@ class MoonrakerAction(MachineAction):
 
         Logger.log("d", "config saved")
         # trigger a stack change to reload the output devices
-        self._application.globalContainerStackChanged.emit()
+        CuraApplication.getInstance().globalContainerStackChanged.emit()
 
     @pyqtSlot()
     def deleteConfig(self):
         if deleteConfig():
             Logger.log("d", "config deleted")
             # trigger a stack change to reload the output devices
-            self._application.globalContainerStackChanged.emit()
+            CuraApplication.getInstance().globalContainerStackChanged.emit()
         else:
             Logger.log("d", "no config to delete")
 

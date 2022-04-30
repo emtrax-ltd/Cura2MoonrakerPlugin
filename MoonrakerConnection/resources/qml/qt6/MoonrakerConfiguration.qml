@@ -29,277 +29,382 @@ Cura.MachineAction {
             upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
             trans_input: translateInputField.text,
             trans_output: translateOutputField.text,
-            trans_remove: translateRemoveField.text
+            trans_remove: translateRemoveField.text,
+            camera_url: cameraUrlField.text
         })
     }
 
-    Cura.RoundedRectangle {
-        anchors {
-            top: machineLabel.bottom
-            topMargin: UM.Theme.getSize("default_margin").height
-            bottom: parent.bottom
-            left: parent.left
-            right: parent.right
-        }
-        cornerSide: Cura.RoundedRectangle.Direction.Down
-        border.color: UM.Theme.getColor("lining")
-        border.width: UM.Theme.getSize("default_lining").width
-        radius: UM.Theme.getSize("default_radius").width
-        color: UM.Theme.getColor("main_background")
+    ListModel {
+        id: tabNameModel
 
-        Cura.ScrollView {
-            id: configurationBase
-            anchors.fill: parent
-            bottomPadding: machineLabel.height * screenScaleFactor + UM.Theme.getSize("default_margin").width * screenScaleFactor
-            scrollAlwaysVisible: false
+        Component.onCompleted: update()
 
-            property int columnSpacing: 3 * screenScaleFactor
-
-            RowLayout {
-                anchors {
-                    top: parent.top
-                    left: parent.left
-                    right: parent.right
-                    margins: UM.Theme.getSize("default_margin").width
-                }
-                spacing: UM.Theme.getSize("default_margin").width
-
-                Column {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-
-                    spacing: configurationBase.columnSpacing
-
-                    UM.Label {
-                        id: connectionLabel
-                        text: catalog.i18nc("@title:label", "Connection")
-                        font: UM.Theme.getFont("medium_bold")
-                        width: parent.width
-                        elide: Text.ElideRight
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    RowLayout {
-                        width: parent.width
-                        x: 15
-
-                        UM.Label {
-                            text: catalog.i18nc("@label", "Moonraker Address (URL)")
-                        }
-                        UM.Label {
-                            visible: !base.validUrl
-                            text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/")
-                            font: UM.Theme.getFont("default_italic")
-                            color: UM.Theme.getColor("error")
-                            leftPadding: 15
-                        }
-                    }
-                    Cura.TextField {
-                        id: urlField
-                        text: manager.settingsUrl                 
-                        maximumLength: 1024
-                        width: parent.width - 40
-                        x: 25
-                        onTextChanged: base.validUrl = manager.validUrl(urlField.text)
-                        onEditingFinished: { updateConfig() }
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    UM.Label {
-                        text: catalog.i18nc("@label", "API-Key (Optional - if the network is untrusted)")
-                        x: 15
-                    }
-                    Cura.TextField {
-                        id: apiKeyField
-                        text: manager.settingsApiKey
-                        maximumLength: 1024
-                        width: parent.width - 40
-                        x: 25
-                        onEditingFinished: { updateConfig() }
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    UM.Label {
-                        text: catalog.i18nc("@label", "Name of Moonraker Power Device(s) in moonraker.conf")
-                        x: 15
-                    }
-                    Cura.TextField {
-                        id: powerDeviceField
-                        text: manager.settingsPowerDevice
-                        maximumLength: 1024
-                        width: parent.width - 40
-                        x: 25
-                        onEditingFinished: { updateConfig() }
-                    }
-
-                    UM.Label {
-                        text: catalog.i18nc("@title:label", "Upload")
-                        font: UM.Theme.getFont("medium_bold")
-                        width: parent.width
-                        topPadding: 25
-                        elide: Text.ElideRight
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    UM.Label {
-                        text: catalog.i18nc("@label", "Format")
-                        x: 15
-                    }
-                    ButtonGroup {
-                        id: outputFormatValue
-                    }
-                    RowLayout {
-                        x: 25
-
-                        Cura.RadioButton {
-                            id: outputFormatGcode
-                            text: catalog.i18nc("@label", "G-code")
-                            checked: manager.settingsOutputFormat != "ufp"
-                            ButtonGroup.group: outputFormatValue
-                            onClicked: { updateConfig() }
-                        }
-                        Cura.RadioButton {
-                            id: outputFormatUfp
-                            text: catalog.i18nc("@label", "UFP with Thumbnail")
-                            checked: manager.settingsOutputFormat == "ufp"
-                            ButtonGroup.group: outputFormatValue
-                            onClicked: { updateConfig() }
-                        }
-                    }
-
-        		    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    UM.Label {
-                        text: catalog.i18nc("@label", "Process")
-                        x: 15
-                    }
-                    UM.CheckBox {
-                        id: uploadRememberStateBox
-                        text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
-                        x: 25
-                        checked: manager.settingsUploadRememberState
-                        onClicked: { updateConfig() }
-                    }
-                    UM.CheckBox {
-                        id: uploadAutohideMessageboxBox
-                        text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
-                        x: 25
-                        checked: manager.settingsUploadAutohideMessagebox
-                        onClicked: { updateConfig() }
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 10
-                    }
-                    RowLayout {
-                        x: 15
-
-                        UM.Label {
-                            text: catalog.i18nc("@label", "Filename Translation ")
-                        }
-                        UM.Label {
-                            text: catalog.i18nc("@label", "filename.translate(filename.maketrans(input[], output[], remove[])")
-                            font: UM.Theme.getFont("default_italic")
-                            color: "gray"
-                            leftPadding: 25
-                        }
-                    }
-                    RowLayout {
-                        x: 25
-                        Layout.alignment: Qt.AlignVCenter
-
-                        UM.Label {
-                            text: catalog.i18nc("@label", "Input")
-                            
-                        }
-                        Rectangle {
-                            width: 120
-                            implicitHeight: translateInputField.implicitHeight
-
-                            Cura.TextField {
-                                id: translateInputField
-                                text: manager.settingsTranslateInput
-                                width: parent.width
-                                maximumLength: 128
-                                onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
-                                onEditingFinished: { updateConfig() }
-                            }
-                        }
-                        
-                        UM.Label {
-                            text: catalog.i18nc("@label", "Output")
-                            leftPadding: 15
-                        }                        
-                        Rectangle { 
-                            width: 120
-                            implicitHeight: translateOutputField.implicitHeight
-
-                            Cura.TextField {
-                                id: translateOutputField
-                                text: manager.settingsTranslateOutput
-                                width: parent.width
-                                maximumLength: 128
-                                onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
-                                onEditingFinished: { updateConfig() }
-                            }
-                        }
-                        
-                        UM.Label {
-                            text: catalog.i18nc("@label", "Remove")
-                            leftPadding: 15
-                        }                        
-                        Rectangle {
-                            width: 120
-                            implicitHeight: translateRemoveField.implicitHeight
-
-                            Cura.TextField {
-                                id: translateRemoveField
-                                text: manager.settingsTranslateRemove
-                                width: parent.width
-                                maximumLength: 128
-                                onEditingFinished: { updateConfig() }
-                            }
-                        }
-                    }
-
-                    Item {
-                        width: parent.width
-                    }
-                    UM.Label {
-                        visible: !base.validTranslation
-                        text: catalog.i18nc("@error", "Number of mapping characters in the input must be equal to the output!")
-                        font: UM.Theme.getFont("default_italic")
-                        color: UM.Theme.getColor("error")
-                        x: 25
-                    }
-                }
-            }
+        function update() {
+            clear()
+            append({ name: catalog.i18nc("@title:tab", "Connection") })
+            append({ name: catalog.i18nc("@title:tab", "Upload") })
+            append({ name: catalog.i18nc("@title:tab", "Monitor") })
 
         }
     }
 
     UM.Label {
         id: machineLabel
-        anchors.top: parent.top
-        anchors.left: parent.left        
-        anchors.leftMargin: UM.Theme.getSize("default_margin").width
+
+        anchors{
+            top: parent.top
+            left: parent.left        
+            leftMargin: UM.Theme.getSize("default_margin").width
+        }
+        font: UM.Theme.getFont("large_bold")
         text: Cura.MachineManager.activeMachine.name
         horizontalAlignment: Text.AlignHCenter
-        font: UM.Theme.getFont("large_bold")
     }
+
+    UM.TabRow  {
+        id: tabBar
+
+        z: 5
+
+        anchors {
+            top: machineLabel.bottom
+            topMargin: UM.Theme.getSize("default_margin").height
+        }
+        width: parent.width
+
+        Repeater {
+            model: tabNameModel
+            delegate: UM.TabRowButton {
+                checked: model.index == 0
+                text: model.name
+            }
+        }
+    }
+
+    Cura.RoundedRectangle {
+        id: tabView
+
+        anchors {
+            top: tabBar.bottom
+            topMargin: -UM.Theme.getSize("default_lining").height
+            bottom: parent.bottom
+            left: parent.left
+            right: parent.right
+        }
+        border {
+            color: UM.Theme.getColor("lining")
+            width: UM.Theme.getSize("default_lining").width
+        }
+        color: UM.Theme.getColor("main_background")
+        radius: UM.Theme.getSize("default_radius").width
+        cornerSide: Cura.RoundedRectangle.Direction.Down
+
+        StackLayout {
+            id: tabStack
+
+            anchors.fill: parent
+            currentIndex: tabBar.currentIndex
+
+            Item {
+                id: connectionPane
+
+                RowLayout {
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                        margins: UM.Theme.getSize("default_margin").width
+                    }
+                    spacing: UM.Theme.getSize("default_margin").width
+
+                    Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+
+                        spacing: UM.Theme.getSize("default_margin").height
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        RowLayout {
+                            width: parent.width
+                            x: 15
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Address (URL)")
+                            }
+                            UM.Label {
+                                visible: !base.validUrl
+                                leftPadding: 15
+                                font: UM.Theme.getFont("default_italic")
+                                color: UM.Theme.getColor("error")
+                                text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/")
+                            }
+                        }
+                        Cura.TextField {
+                            id: urlField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsUrl                 
+                            maximumLength: 1024
+                            onTextChanged: base.validUrl = manager.validUrl(urlField.text)
+                            onEditingFinished: { updateConfig() }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        UM.Label {
+                            x: 15
+                            text: catalog.i18nc("@label", "API-Key (Optional - if the network is untrusted)")
+                        }
+                        Cura.TextField {
+                            id: apiKeyField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsApiKey
+                            maximumLength: 1024
+                            onEditingFinished: { updateConfig() }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        UM.Label {
+                            x: 15
+                            text: catalog.i18nc("@label", "Power Device(s) (Name configured in moonraker.conf")
+                        }
+                        Cura.TextField {
+                            id: powerDeviceField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsPowerDevice
+                            maximumLength: 1024
+                            onEditingFinished: { updateConfig() }
+                        }
+                    }
+                }
+            }
+            
+            Item {
+                id: processPane
+
+                RowLayout {
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                        margins: UM.Theme.getSize("default_margin").width
+                    }
+                    spacing: UM.Theme.getSize("default_margin").width
+
+                    Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+
+                        spacing: UM.Theme.getSize("default_margin").height
+
+                        Item {
+                         width: parent.width
+                            height: 10
+                        }
+                        UM.Label {
+                            x: 15
+                            text: catalog.i18nc("@label", "Format")
+                        }
+                        ButtonGroup {
+                            id: outputFormatValue
+                        }
+                        RowLayout {
+                            x: 25
+
+                            Cura.RadioButton {
+                                ButtonGroup.group: outputFormatValue
+
+                                id: outputFormatGcode
+
+                                text: catalog.i18nc("@label", "G-code")
+                                checked: manager.settingsOutputFormat != "ufp"
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: outputFormatValue
+
+                                id: outputFormatUfp
+
+                                text: catalog.i18nc("@label", "UFP with Thumbnail")
+                                checked: manager.settingsOutputFormat == "ufp"
+                                onClicked: { updateConfig() }
+                            }
+                        }
+
+        		        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        UM.Label {
+                            x: 15
+                            text: catalog.i18nc("@label", "Process")
+                        }
+                        UM.CheckBox {
+                            id: uploadRememberStateBox
+
+                            x: 25
+                            text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
+                            checked: manager.settingsUploadRememberState
+                            onClicked: { updateConfig() }
+                        }
+                        UM.CheckBox {
+                            id: uploadAutohideMessageboxBox
+
+                            x: 25
+                            text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
+                            checked: manager.settingsUploadAutohideMessagebox
+                        onClicked: { updateConfig() }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        RowLayout {
+                            x: 15
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Filename Translation ")
+                            }
+                            UM.Label {
+                                leftPadding: 25
+                                font: UM.Theme.getFont("default_italic")
+                                color: "gray"
+                                text: catalog.i18nc("@label", "filename.translate(filename.maketrans(input[], output[], remove[])")
+                            }
+                        }
+                        RowLayout {
+                            Layout.alignment: Qt.AlignVCenter
+                            x: 25
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Input")
+                            }
+                            Rectangle {
+                                width: 120
+                                implicitHeight: translateInputField.implicitHeight
+
+                                Cura.TextField {
+                                    id: translateInputField
+
+                                    width: parent.width
+                                    text: manager.settingsTranslateInput
+                                    maximumLength: 128
+                                    onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
+                                    onEditingFinished: { updateConfig() }
+                                }
+                            }
+                        
+                            UM.Label {
+                                leftPadding: 15
+                                text: catalog.i18nc("@label", "Output")
+                            }                        
+                            Rectangle { 
+                                width: 120
+                                implicitHeight: translateOutputField.implicitHeight
+
+                                Cura.TextField {
+                                    id: translateOutputField
+                                
+                                    width: parent.width
+                                    text: manager.settingsTranslateOutput
+                                    maximumLength: 128
+                                    onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
+                                    onEditingFinished: { updateConfig() }
+                                }
+                            }
+                        
+                            UM.Label {
+                                leftPadding: 15
+                                text: catalog.i18nc("@label", "Remove")
+                            }                        
+                            Rectangle {
+                                width: 120
+                                implicitHeight: translateRemoveField.implicitHeight
+
+                                Cura.TextField {
+                                    id: translateRemoveField
+
+                                    width: parent.width
+                                    text: manager.settingsTranslateRemove
+                                    maximumLength: 128
+                                    onEditingFinished: { updateConfig() }
+                                }
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                        }
+                        UM.Label {
+                            visible: !base.validTranslation
+                            x: 25
+                            font: UM.Theme.getFont("default_italic")
+                            color: UM.Theme.getColor("error")
+                            text: catalog.i18nc("@error", "Number of mapping characters in the input must be equal to the output!")
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: monitorPane
+
+                RowLayout {
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                        margins: UM.Theme.getSize("default_margin").width
+                    }
+                    spacing: UM.Theme.getSize("default_margin").width
+
+                    Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+
+                        spacing: UM.Theme.getSize("default_margin").height
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        RowLayout {
+                            width: parent.width
+                            x: 15
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-Url)")
+                            }
+                        }
+                        Cura.TextField {
+                            id: cameraUrlField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsCameraUrl                 
+                            maximumLength: 1024
+                            onEditingFinished: { updateConfig() }
+                        }
+
+                    }
+                }
+ 
+            }
+        }
+    }
+
 }

@@ -64,24 +64,27 @@ UM.Dialog {
                         width: parent.width
                         
                         UM.Label {
-                            text: catalog.i18nc("@label", "Filename")
                             anchors.bottomMargin: 10
+                            text: catalog.i18nc("@label", "Filename")
                         }
                         UM.Label {
+                            visible: !base.validName
                             text: base.validationError
                             font: UM.Theme.getFont("default_italic")
                             color: UM.Theme.getColor("error")
                             leftPadding: 15
-                            visible: !base.validName
+
                         }
                     }
 
                     Cura.TextField {
                         objectName: "nameField"
+                        maximumLength: 1024
+
                         id: nameField
+
                         text: base.object
                         font: UM.Theme.getFont("default")
-                        maximumLength: 1024
                         width: parent.width
                         onTextChanged: base.textChanged(text)
                         Keys.onReturnPressed: { if (base.validName) base.accept() }
@@ -96,6 +99,7 @@ UM.Dialog {
                     RowLayout {
                         UM.CheckBox {
                             objectName: "printField";
+
                             id: printField;
                             text: catalog.i18nc("@label", "Start print job")
                         }
