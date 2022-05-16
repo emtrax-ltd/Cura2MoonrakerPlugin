@@ -10,11 +10,11 @@ USE_QT5 = False
 try:
     from PyQt6.QtCore import QByteArray, QObject, QUrl, QVariant, pyqtSlot, pyqtProperty
     from PyQt6.QtGui import QDesktopServices
-    from PyQt6.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest, QNetworkReply
+    from PyQt6.QtNetwork import QNetworkRequest, QNetworkReply, QHttpMultiPart, QHttpPart
 except ImportError:
     from PyQt5.QtCore import QByteArray, QObject, QUrl, QVariant, pyqtSlot, pyqtProperty
     from PyQt5.QtGui import QDesktopServices
-    from PyQt5.QtNetwork import QHttpMultiPart, QHttpPart, QNetworkReply, QNetworkRequest, QNetworkReply
+    from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply, QHttpMultiPart, QHttpPart
     USE_QT5 = True
 
 from cura.CuraApplication import CuraApplication
@@ -27,9 +27,19 @@ from UM.Mesh.MeshWriter import MeshWriter
 from UM.Message import Message
 from UM.OutputDevice import OutputDeviceError
 
-
 from .MoonrakerOutputController import MoonrakerOutputController
 from .MoonrakerSettings import getConfig, saveConfig, validateUrl
+
+try:
+	NoError = QNetworkReply.NetworkError.NoError
+	FormDataType = QHttpMultiPart.ContentType.FormDataType
+	ContentDispositionHeader = QNetworkRequest.KnownHeaders.ContentDispositionHeader
+	ContentTypeHeader = QNetworkRequest.KnownHeaders.ContentTypeHeader
+except AttributeError:
+	NoError = 0
+	FormDataType = QHttpMultiPart.FormDataType
+	ContentDispositionHeader = QNetworkRequest.ContentDispositionHeader
+	ContentTypeHeader = QNetworkRequest.ContentTypeHeader
 
 catalog = i18nCatalog("cura")
 spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
@@ -311,7 +321,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
         if self._stage != OutputStage.Writing:
             return # never gets here now?
-        if reply.error() != QNetworkReply.NetworkError.NoError:  # 0 == QtNetwork.NoError            
+        if reply.error() != NoError: # QNetworkReply.NetworkError.NoError // 0            
             Logger.log("e", "Stopping due to reply error: {}.".format(reply.error()))
             self._onRequestError(reply)
             return
@@ -355,7 +365,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
     def _onFileUploaded(self, reply: QNetworkReply) -> None:
         if self._stage != OutputStage.Writing:
             return
-        if reply.error() != QNetworkReply.NetworkError.NoError: # 0 == QtNetwork.NoError            
+        if reply.error() != NoError: # QNetworkReply.NetworkError.NoError // 0            
             Logger.log("e", "Stopping due to reply error: {}.".format(reply.error()))
             self._onRequestError(reply)
             return
@@ -411,22 +421,22 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
         if data is not None:
             if not dataIsJSON:
                 # Create multi_part request           
-                parts = QHttpMultiPart(QHttpMultiPart.ContentType.FormDataType)
+                parts = QHttpMultiPart(FormDataType)
 
                 part_file = QHttpPart()
-                part_file.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
-                part_file.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, QVariant('application/octet-stream'))
+                part_file.setHeader(ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
+                part_file.setHeader(ContentTypeHeader, QVariant('application/octet-stream'))
                 part_file.setBody(data)
                 parts.append(part_file)
 
                 part_root = QHttpPart()
-                part_root.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="root"'))
+                part_root.setHeader(ContentDispositionHeader, QVariant('form-data; name="root"'))
                 part_root.setBody(b"gcodes")
                 parts.append(part_root)
 
                 if self._startPrint:
                     part_print = QHttpPart()
-                    part_print.setHeader(QNetworkRequest.KnownHeaders.ContentDispositionHeader, QVariant('form-data; name="print"'))
+                    part_print.setHeader(ContentDispositionHeader, QVariant('form-data; name="print"'))
                     part_print.setBody(b"true")
                     parts.append(part_print)
 
