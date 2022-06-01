@@ -4,7 +4,7 @@
 - You can also start a print job using the upload process
 
 ## How to Install
-The installation of this plugin is straightforward ... no compiling etc.
+The installation of this plugin is straightforward, no compiling, etc.
 
 1. Download this repository as zip file (https://github.com/emtrax-ltd/Cura2MoonrakerPlugin/archive/main.zip) and unzip it.
 2. Find your Cura plugins directory:
@@ -15,14 +15,13 @@ The installation of this plugin is straightforward ... no compiling etc.
       * Right-click on `Ultimaker Cura.app` in your `Applications` folder then click on `Show Package Contents`. 
         * In Cura 4.x or older, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> Plugins -> Plugins`.
         * In Cura 5.x or newer, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> share -> cura -> plugins`. 
-   * linux:
+   * Linux:
       * The user based installation path is at `~/.local/share/cura/[version number]/plugins`.
-3. Copy the extracted folder `MoonrakerConnection` into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. Looks like `...\cura\[version number]\plugins\MoonrakerConnection\MoonrakerConnection`. 
-Make sure that installations of previous released folder `MoonrakerPlugin` are completely removed!
-4. If Cura is allready running: quit and restart it.
+3. Copy the extracted folder `MoonrakerConnection` into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. It looks like `...\cura\[version number]\plugins\MoonrakerConnection\MoonrakerConnection`. Check that installation of the previously released folder 'MoonrakerPlugin' is completely removed!
+4. If Cura is already running: quit, and restart it.
 
 ## How to Configure
-To configure your Moonraker 3D printer...
+To configure your Moonraker 3D printer:
 1. Go to `Settings` -> `Printer` -> `Manage Printers`.
 2. Select <Your Printername> and click on `Connect Moonraker`.
 3. Fill in the URL and select your preferred output format.
@@ -35,7 +34,7 @@ To configure your Moonraker 3D printer...
 3. Now you can modify the filename, select the option to create a print job and finally... click `Upload` :)
   
 ## How to "Filename Translation"
-This is a requested feature to replace/remove special chracters within the suggested filename (by Cura) before uploading it to moonraker. The working principle is relativly simple: replacement by mapping characters 1:1 from "input" into "output" and removement by putting the unwanted characters into "remove".
+This is a requested feature to replace/remove special characters within the suggested filename (by Cura) before uploading it to Moonraker. The working principle is relatively simple: replacement by mapping characters 1:1 from "input" into "output" and deleting by putting the unwanted characters into "remove".
 
 Example:
   - input: " ."  <- first character is a whitespace
@@ -49,8 +48,7 @@ If you have devices configured for power control in Moonraker, you can configure
 the plug-in. For a single device, just enter that device's name from Moonraker config.
 
 If you have more than one power device you wish to turn on, enter a comma-separated list,
-with the first device being the device that will be queried before attempting to turn anything
-on.
+with the first device being the device that will be queried before attempting to turn anything on.
 
 Example:
  - Target: One config device with an entry name of [power printer]
