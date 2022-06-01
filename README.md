@@ -12,7 +12,9 @@ The installation of this plugin is straightforward ... no compiling etc.
       * The default installation path is `C:\Program Files\Ultimaker Cura [version number]\plugins`.
       * The user based installation path is `C:\Users\<Your Username>\AppData\Roaming\cura\[version number]\plugins` (no admin privileges needed)
    * macOS:
-      * Right-click on `Ultimaker Cura.app` in your `Applications` folder then click on `Show Package Contents`. The default installation path is `Ultimaker Cura.app -> Contents -> Resources -> Plugins -> Plugins`.
+      * Right-click on `Ultimaker Cura.app` in your `Applications` folder then click on `Show Package Contents`. 
+        * In Cura 4.x or older, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> Plugins -> Plugins`.
+        * In Cura 5.x or newer, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> share -> cura -> plugins`. 
    * linux:
       * The user based installation path is at `~/.local/share/cura/[version number]/plugins`.
 3. Copy the extracted folder `MoonrakerConnection` into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. Looks like `...\cura\[version number]\plugins\MoonrakerConnection\MoonrakerConnection`. 
