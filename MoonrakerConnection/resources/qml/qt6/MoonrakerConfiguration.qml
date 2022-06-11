@@ -13,6 +13,7 @@ Cura.MachineAction {
     anchors.fill: parent
     
     property bool validUrl: true
+    property bool validFrontendUrl: true
     property bool validTranslation: true
 
     function outputFormat() {
@@ -24,6 +25,7 @@ Cura.MachineAction {
             url: urlField.text,
             api_key: apiKeyField.text,
             power_device: powerDeviceField.text,
+            frontend_url: frontendUrlField.text,
             output_format: outputFormat(),
             upload_remember_state: uploadRememberStateBox.checked,
             upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
@@ -147,7 +149,7 @@ Cura.MachineAction {
 
                             width: parent.width - 40
                             x: 25
-                            text: manager.settingsUrl                 
+                            text: manager.settingsUrl
                             maximumLength: 1024
                             onTextChanged: base.validUrl = manager.validUrl(urlField.text)
                             onEditingFinished: { updateConfig() }
@@ -186,6 +188,36 @@ Cura.MachineAction {
                             x: 25
                             text: manager.settingsPowerDevice
                             maximumLength: 1024
+                            onEditingFinished: { updateConfig() }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        RowLayout {
+                            width: parent.width
+                            x: 15
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Frontend (alternative URL instead of Moonraker's address for \"Open Browser\")")
+                            }
+                            UM.Label {
+                                visible: !base.validFrontendUrl
+                                leftPadding: 15
+                                font: UM.Theme.getFont("default_italic")
+                                color: UM.Theme.getColor("error")
+                                text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.2/")
+                            }
+                        }
+                        Cura.TextField {
+                            id: frontendUrlField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsFrontendUrl
+                            maximumLength: 1024
+                            onTextChanged: base.validFrontendUrl = manager.validUrl(frontendUrlField.text)
                             onEditingFinished: { updateConfig() }
                         }
                     }

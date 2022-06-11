@@ -32,6 +32,7 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
+        self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
         self.settingsUploadRememberStateChanged.emit()
         self.settingsUploadAutohideMessageboxChanged.emit()
@@ -49,6 +50,7 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
+        self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
         self.settingsUploadRememberStateChanged.emit()
         self.settingsUploadAutohideMessageboxChanged.emit()
@@ -60,6 +62,7 @@ class MoonrakerMachineAction(MachineAction):
     settingsUrlChanged = pyqtSignal()
     settingsApiKeyChanged = pyqtSignal()
     settingsPowerDeviceChanged = pyqtSignal()
+    settingsFrontendUrlChanged = pyqtSignal()
     settingsOutputFormatChanged = pyqtSignal()
     settingsUploadRememberStateChanged = pyqtSignal()
     settingsUploadAutohideMessageboxChanged = pyqtSignal()
@@ -82,6 +85,11 @@ class MoonrakerMachineAction(MachineAction):
     def settingsPowerDevice(self) -> Optional[str]:
         config = getConfig()
         return config.get("power_device", "") if config else ""
+
+    @pyqtProperty(str, notify = settingsFrontendUrlChanged)
+    def settingsFrontendUrl(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("frontend_url", "") if config else ""
 
     @pyqtProperty(str, notify = settingsOutputFormatChanged)
     def settingsOutputFormat(self) -> Optional[str]:

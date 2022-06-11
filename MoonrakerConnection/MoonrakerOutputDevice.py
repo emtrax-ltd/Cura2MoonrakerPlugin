@@ -132,6 +132,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._url = self._config.get("url", "").strip()
             self._apiKey = self._config.get("api_key", "").strip()
             self._powerDevice = self._config.get("power_device", "").strip()
+            self._frontendUrl = self._config.get("frontend_url", self._url).strip()
             self._outputFormat = self._config.get("output_format", "gcode")
             if self._outputFormat and self._outputFormat != "ufp":
                 self._outputFormat = "gcode"
@@ -393,7 +394,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
     def _onMessageActionTriggered(self, message: Message, action: str) -> None:
         if action == "open_browser":
-            QDesktopServices.openUrl(QUrl(self._url))
+            QDesktopServices.openUrl(QUrl(self._frontendUrl))
             if self._message:
                 self._message.hide()
                 self._message = None
