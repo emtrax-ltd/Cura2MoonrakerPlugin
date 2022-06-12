@@ -27,6 +27,8 @@ Cura.MachineAction {
             power_device: powerDeviceField.text,
             frontend_url: frontendUrlField.text,
             output_format: outputFormat(),
+            upload_dialog: uploadDialogVisible.checked,
+            upload_start_print_job: uploadStartPrintJobBox.checked,
             upload_remember_state: uploadRememberStateBox.checked,
             upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
             trans_input: translateInputField.text,
@@ -190,7 +192,7 @@ Cura.MachineAction {
                             x: 15
                             color: UM.Theme.getColor("text")
                             font: UM.Theme.getFont("default")       
-                            text: catalog.i18nc("@label", "Power Device(s) (Name configured in moonraker.conf")
+                            text: catalog.i18nc("@label", "Power Device(s) (Name configured in moonraker.conf)")
                             renderType: Text.NativeRendering
                         }
                         Cura.TextField {
@@ -306,6 +308,43 @@ Cura.MachineAction {
                             text: catalog.i18nc("@label", "Process")
                             renderType: Text.NativeRendering
                         }
+                        ButtonGroup {
+                            id: uploadDialogValue
+                        }
+                        RowLayout {
+                            x: 25
+
+                            Cura.RadioButton {
+                                ButtonGroup.group: uploadDialogValue
+
+                                id: uploadDialogVisible
+
+                                text: catalog.i18nc("@label", "Upload Dialog")
+                                checked: manager.settingsUploadDialog
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: uploadDialogValue
+
+                                id: uploadDialogBypass
+
+                                text: catalog.i18nc("@label", "Fire & Forget")
+                                checked: !manager.settingsUploadDialog
+                                onClicked: { updateConfig() }
+                            }
+                        }
+                        Cura.CheckBox {
+                            id: uploadStartPrintJobBox
+
+                            x: 25
+                            height: UM.Theme.getSize("checkbox").height
+                            font: UM.Theme.getFont("default")
+
+                            text: catalog.i18nc("@label", "Automatic start of print job after upload")
+                            checked: manager.settingsUploadStartPrintJob
+                            visible: uploadDialogOverride.checked
+                            onClicked: { updateConfig() }
+                        }
                         Cura.CheckBox {
                             id: uploadRememberStateBox
 
@@ -315,6 +354,7 @@ Cura.MachineAction {
 
                             text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
                             checked: manager.settingsUploadRememberState
+                            visible: uploadDialogVisible.checked
                             onClicked: { updateConfig() }
                         }
                         Cura.CheckBox {
@@ -460,7 +500,7 @@ Cura.MachineAction {
                             x: 15
 
                             Label {
-                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-Url)")
+                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-URL)")
                                 font: UM.Theme.getFont("default")
                                 color: UM.Theme.getColor("text")
                                 renderType: Text.NativeRendering

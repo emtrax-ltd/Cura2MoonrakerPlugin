@@ -108,16 +108,20 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
         self._fileName = fileName  + "." + self._outputFormat
 
-        # Display upload dialog
-        qmlUrl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerUpload.qml')        
-        self._dialog = CuraApplication.getInstance().createQmlComponent(qmlUrl, {"manager": self})
-        self._dialog.textChanged.connect(self._onUploadFilenameChanged)
-        self._dialog.accepted.connect(self._onUploadFilenameAccepted)
-        self._dialog.show()
-        self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
-        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._outputFormat) - 1)
-        self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
-        self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
+        if self._uploadDialog:
+            # Display upload dialog
+            qmlUrl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerUpload.qml')        
+            self._dialog = CuraApplication.getInstance().createQmlComponent(qmlUrl, {"manager": self})
+            self._dialog.textChanged.connect(self._onUploadFilenameChanged)
+            self._dialog.accepted.connect(self._onUploadFilenameAccepted)
+            self._dialog.show()
+            self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
+            self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._outputFormat) - 1)
+            self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
+            self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
+        else:
+            # Bypass upload dialog
+            self._onUploadFilenameAccepted()
 
     def updateConfig(self, config: dict = None) -> None:
         if self._stage != OutputStage.Ready:
@@ -136,6 +140,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._outputFormat = self._config.get("output_format", "gcode")
             if self._outputFormat and self._outputFormat != "ufp":
                 self._outputFormat = "gcode"
+            self._uploadDialog = self._config.get("upload_dialog", True)
             self._uploadStartPrintJob = self._config.get("upload_start_print_job", False)
             self._uploadRememberState = self._config.get("upload_remember_state", False)
             self._uploadAutohideMessagebox = self._config.get("upload_autohide_messagebox", False)
@@ -217,21 +222,26 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
     def _onUploadFilenameAccepted(self) -> None:
         # Resolve filename
-        self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
+        if self._uploadDialog:
+            self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()          
         if not self._fileName.endswith('.' + self._outputFormat) and '.' not in self._fileName:
             self._fileName += '.' + self._outputFormat
         Logger.log("d", "FileName set to {}.".format(self._fileName))
 
         # Resolve start of print job
-        self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
-        if self._uploadRememberState:
-            self._uploadStartPrintJob = self._startPrint
-            config = getConfig()
-            config["upload_start_print_job"] = self._startPrint
-            saveConfig(config)
+        if self._uploadDialog:
+            self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
+            if self._uploadRememberState:
+                self._uploadStartPrintJob = self._startPrint
+                config = getConfig()
+                config["upload_start_print_job"] = self._startPrint
+                saveConfig(config)
+        else:
+            self._startPrint = self._uploadStartPrintJob
         Logger.log("d", "StartPrint set to {}.".format(str(self._startPrint)))
 
-        self._dialog.deleteLater()       
+        if self._uploadDialog:
+            self._dialog.deleteLater()       
         Logger.log("i", "Connecting to Moonraker at {}.".format(self._url))
 
         # Show a message with status of connection
@@ -263,7 +273,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             powerDevice = powerDevices[0]
 
         powerDevicesStatus = response['result'][powerDevice]
-        logMessage = "Power device [power {}] status == '{}'; self._startPrint is {} => ".format(powerDevice, powerDevicesStatus, self._startPrint)
+        logMessage = "Power device [power {}] status == '{}'; startPrint is {} => ".format(powerDevice, powerDevicesStatus, self._startPrint)
 
         if powerDevicesStatus == 'on':               
             Logger.log("d", logMessage + "Calling _getPrinterStatus()")
@@ -286,7 +296,6 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
         else:
             Logger.log("i", "Turning on (single) Moonraker power device [power {}].".format(powerDevice))
             self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus)
-
 
     def _getPrinterStatus(self, reply: QNetworkReply = None) -> None:
         self._sendRequest('printer/info', on_success = self._checkPrinterStatus, on_error = self._onPrinterError)

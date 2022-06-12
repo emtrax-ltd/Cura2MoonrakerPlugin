@@ -34,6 +34,8 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsPowerDeviceChanged.emit()
         self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
+        self.settingsUploadDialogChanged.emit()
+        self.settingsUploadStartPrintJobChanged.emit()
         self.settingsUploadRememberStateChanged.emit()
         self.settingsUploadAutohideMessageboxChanged.emit()
         self.settingsTranslateInputChanged.emit()
@@ -52,6 +54,8 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsPowerDeviceChanged.emit()
         self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
+        self.settingsUploadDialogChanged.emit()
+        self.settingsUploadStartPrintJobChanged.emit()
         self.settingsUploadRememberStateChanged.emit()
         self.settingsUploadAutohideMessageboxChanged.emit()
         self.settingsTranslateInputChanged.emit()
@@ -64,6 +68,8 @@ class MoonrakerMachineAction(MachineAction):
     settingsPowerDeviceChanged = pyqtSignal()
     settingsFrontendUrlChanged = pyqtSignal()
     settingsOutputFormatChanged = pyqtSignal()
+    settingsUploadDialogChanged = pyqtSignal()
+    settingsUploadStartPrintJobChanged = pyqtSignal()
     settingsUploadRememberStateChanged = pyqtSignal()
     settingsUploadAutohideMessageboxChanged = pyqtSignal()
     settingsTranslateInputChanged = pyqtSignal()
@@ -95,6 +101,16 @@ class MoonrakerMachineAction(MachineAction):
     def settingsOutputFormat(self) -> Optional[str]:
         config = getConfig()
         return config.get("output_format", "gcode" if config else "gcode")
+
+    @pyqtProperty(bool, notify = settingsUploadDialogChanged)
+    def settingsUploadDialog(self) -> Optional[bool]:
+        config = getConfig()
+        return config.get("upload_dialog", True) if config else True
+
+    @pyqtProperty(bool, notify = settingsUploadStartPrintJobChanged)
+    def settingsUploadStartPrintJob(self) -> Optional[bool]:
+        config = getConfig()
+        return config.get("upload_start_print_job", False) if config else False
 
     @pyqtProperty(bool, notify = settingsUploadRememberStateChanged)
     def settingsUploadRememberState(self) -> Optional[bool]:
@@ -133,7 +149,8 @@ class MoonrakerMachineAction(MachineAction):
         config = paramsQJSValObj.toVariant()
         if not config["url"].endswith('/'):
             config["url"] += '/'
-        config["upload_start_print_job"] = oldConfig.get("upload_start_print_job", False) if oldConfig else False
+        if not "upload_start_print_job" in config.keys():
+            config["upload_start_print_job"] = oldConfig.get("upload_start_print_job", False) if oldConfig else False
         saveConfig(config)
 
         Logger.log("d", "config saved")

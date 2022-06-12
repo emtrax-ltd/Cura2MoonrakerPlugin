@@ -27,6 +27,8 @@ Cura.MachineAction {
             power_device: powerDeviceField.text,
             frontend_url: frontendUrlField.text,
             output_format: outputFormat(),
+            upload_dialog: uploadDialogVisible.checked,
+            upload_start_print_job: uploadStartPrintJobBox.checked,
             upload_remember_state: uploadRememberStateBox.checked,
             upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
             trans_input: translateInputField.text,
@@ -179,7 +181,7 @@ Cura.MachineAction {
                         }
                         UM.Label {
                             x: 15
-                            text: catalog.i18nc("@label", "Power Device(s) (Name configured in moonraker.conf")
+                            text: catalog.i18nc("@label", "Power Device(s) (Name configured in moonraker.conf)")
                         }
                         Cura.TextField {
                             id: powerDeviceField
@@ -284,12 +286,47 @@ Cura.MachineAction {
                             x: 15
                             text: catalog.i18nc("@label", "Process")
                         }
+                        ButtonGroup {
+                            id: uploadDialogValue
+                        }
+                        RowLayout {
+                            x: 25
+
+                            Cura.RadioButton {
+                                ButtonGroup.group: uploadDialogValue
+
+                                id: uploadDialogVisible
+
+                                text: catalog.i18nc("@label", "Upload Dialog")
+                                checked: manager.settingsUploadDialog
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: uploadDialogValue
+
+                                id: uploadDialogBypass
+
+                                text: catalog.i18nc("@label", "Fire & Forget")
+                                checked: !manager.settingsUploadDialog
+                                onClicked: { updateConfig() }
+                            }
+                        }
+                        UM.CheckBox {
+                            id: uploadStartPrintJobBox
+
+                            x: 25
+                            text: catalog.i18nc("@label", "Automatic start of print job after upload")
+                            checked: manager.settingsUploadStartPrintJob
+                            visible: uploadDialogOverride.checked
+                            onClicked: { updateConfig() }                           
+                        }
                         UM.CheckBox {
                             id: uploadRememberStateBox
 
                             x: 25
                             text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
                             checked: manager.settingsUploadRememberState
+                            visible: uploadDialogVisible.checked
                             onClicked: { updateConfig() }
                         }
                         UM.CheckBox {
@@ -298,7 +335,7 @@ Cura.MachineAction {
                             x: 25
                             text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
                             checked: manager.settingsUploadAutohideMessagebox
-                        onClicked: { updateConfig() }
+                            onClicked: { updateConfig() }
                         }
 
                         Item {
@@ -419,7 +456,7 @@ Cura.MachineAction {
                             x: 15
 
                             UM.Label {
-                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-Url)")
+                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-URL)")
                             }
                         }
                         Cura.TextField {
