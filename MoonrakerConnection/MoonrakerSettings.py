@@ -65,6 +65,15 @@ def validateUrl(url: str = None) -> bool:
         return False
     return True
 
+def validateRetryInterval(retryInterval: str = None) -> bool:
+    try:
+        float(retryInterval)
+        return True
+    except ValueError:
+        if not retryInterval:
+            return True
+        return False
+
 def validateTranslation(translateInput: str = None, translateOutput: str = None) -> bool:
     if len(translateInput) != len(translateOutput):
         return False

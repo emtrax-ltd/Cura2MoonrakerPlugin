@@ -13,6 +13,7 @@ Cura.MachineAction {
     anchors.fill: parent
     
     property bool validUrl: true
+    property bool validRetryInterval: true
     property bool validFrontendUrl: true
     property bool validTranslation: true
 
@@ -25,6 +26,7 @@ Cura.MachineAction {
             url: urlField.text,
             api_key: apiKeyField.text,
             power_device: powerDeviceField.text,
+            retry_interval: retryIntervalField.text,
             frontend_url: frontendUrlField.text,
             output_format: outputFormat(),
             upload_dialog: uploadDialogVisible.checked,
@@ -190,6 +192,36 @@ Cura.MachineAction {
                             x: 25
                             text: manager.settingsPowerDevice
                             maximumLength: 1024
+                            onEditingFinished: { updateConfig() }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 10
+                        }
+                        RowLayout {
+                            width: parent.width
+                            x: 15
+
+                            UM.Label {
+                                text: catalog.i18nc("@label", "Retry interval in seconds (Optional - default: 0.5 [20 iterations])")
+                            }
+                            UM.Label {
+                                visible: !base.validRetryInterval
+                                leftPadding: 15
+                                font: UM.Theme.getFont("default_italic")
+                                color: UM.Theme.getColor("error")
+                                text: catalog.i18nc("@error", "Value not valid. Example: 0.5 or 2")
+                            }
+                        }
+                        Cura.TextField {
+                            id: retryIntervalField
+
+                            width: parent.width - 40
+                            x: 25
+                            text: manager.settingsRetryInterval
+                            maximumLength: 1024
+                            onTextChanged: base.validRetryInterval = manager.validRetryInterval(retryIntervalField.text)
                             onEditingFinished: { updateConfig() }
                         }
 
