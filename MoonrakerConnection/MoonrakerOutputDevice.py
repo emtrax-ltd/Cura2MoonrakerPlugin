@@ -136,6 +136,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._url = self._config.get("url", "").strip()
             self._apiKey = self._config.get("api_key", "").strip()
             self._powerDevice = self._config.get("power_device", "").strip()
+            self._retryInterval = self._config.get("retry_interval", "").strip()
             self._frontendUrl = self._config.get("frontend_url", self._url).strip()
             self._outputFormat = self._config.get("output_format", "gcode")
             if self._outputFormat and self._outputFormat != "ufp":
@@ -368,7 +369,10 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self.writeError.emit(self)
             self._resetState()
         else:
-            sleep(0.5)
+            try:
+                sleep(float(self._retryInterval))
+            except ValueError:
+                sleep(0.5)
             self._message.setText(self._getConnectMessage())
             self._getPrinterStatus()
 

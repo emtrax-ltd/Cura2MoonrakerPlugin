@@ -19,7 +19,7 @@ from UM.i18n import i18nCatalog
 
 catalog = i18nCatalog("cura")
 
-from .MoonrakerSettings import getConfig, saveConfig, deleteConfig, validateUrl, validateTranslation
+from .MoonrakerSettings import getConfig, saveConfig, deleteConfig, validateUrl, validateRetryInterval, validateTranslation
 
 class MoonrakerMachineAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
@@ -32,6 +32,7 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
+        self.settingsRetryIntervalChanged.emit()
         self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
         self.settingsUploadDialogChanged.emit()
@@ -52,6 +53,7 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
+        self.settingsRetryIntervalChanged.emit()
         self.settingsFrontendUrlChanged.emit()
         self.settingsOutputFormatChanged.emit()
         self.settingsUploadDialogChanged.emit()
@@ -66,6 +68,7 @@ class MoonrakerMachineAction(MachineAction):
     settingsUrlChanged = pyqtSignal()
     settingsApiKeyChanged = pyqtSignal()
     settingsPowerDeviceChanged = pyqtSignal()
+    settingsRetryIntervalChanged = pyqtSignal()
     settingsFrontendUrlChanged = pyqtSignal()
     settingsOutputFormatChanged = pyqtSignal()
     settingsUploadDialogChanged = pyqtSignal()
@@ -91,6 +94,11 @@ class MoonrakerMachineAction(MachineAction):
     def settingsPowerDevice(self) -> Optional[str]:
         config = getConfig()
         return config.get("power_device", "") if config else ""
+
+    @pyqtProperty(str, notify = settingsRetryIntervalChanged)
+    def settingsRetryInterval(self) -> Optional[str]:
+        config = getConfig()
+        return config.get("retry_interval", "") if config else ""
 
     @pyqtProperty(str, notify = settingsFrontendUrlChanged)
     def settingsFrontendUrl(self) -> Optional[str]:
@@ -169,6 +177,10 @@ class MoonrakerMachineAction(MachineAction):
     @pyqtSlot(str, result = bool)
     def validUrl(self, url) -> bool:
         return validateUrl(url)
+
+    @pyqtSlot(str, result = bool)
+    def validRetryInterval(self, retryInterval) -> bool:
+        return validateRetryInterval(retryInterval)
 
     @pyqtSlot(str, str, result = bool)
     def validTranslation(self, translateInput, translateOutput) -> bool:
