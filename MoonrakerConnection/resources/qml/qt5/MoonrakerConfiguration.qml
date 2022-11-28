@@ -21,6 +21,10 @@ Cura.MachineAction {
         return outputFormatUfp.checked ? "ufp" : "gcode"
     }
 
+    function cameraImageRotation() {
+        return cameraImageRotation90.checked ? "90" : cameraImageRotation180.checked ? "180" : cameraImageRotation270.checked ? "270" : "0"
+    }
+
     function updateConfig() {
         manager.saveConfig({
             url: urlField.text,
@@ -36,7 +40,9 @@ Cura.MachineAction {
             trans_input: translateInputField.text,
             trans_output: translateOutputField.text,
             trans_remove: translateRemoveField.text,
-            camera_url: cameraUrlField.text
+            camera_url: cameraUrlField.text,
+            camera_image_rotation: cameraImageRotation(),
+            camera_image_mirror: cameraImageMirror.checked
         })
     }
 
@@ -378,7 +384,7 @@ Cura.MachineAction {
 
                             text: catalog.i18nc("@label", "Automatic start of print job after upload")
                             checked: manager.settingsUploadStartPrintJob
-                            visible: uploadDialogOverride.checked
+                            visible: uploadDialogBypass.checked
                             onClicked: { updateConfig() }
                         }
                         Cura.CheckBox {
@@ -401,7 +407,7 @@ Cura.MachineAction {
                             font: UM.Theme.getFont("default")
                             text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
                             checked: manager.settingsUploadAutohideMessagebox
-                        onClicked: { updateConfig() }
+                            onClicked: { updateConfig() }
                         }
 
                         Item {
@@ -531,27 +537,90 @@ Cura.MachineAction {
                             width: parent.width
                             height: 10
                         }
-                        RowLayout {
-                            width: parent.width
+                        Label {
                             x: 15
+                            color: UM.Theme.getColor("text")
+                            font: UM.Theme.getFont("default")       
+                            text: catalog.i18nc("@label", "Camera")
+                            renderType: Text.NativeRendering
+                        }
 
-                            Label {
-                                text: catalog.i18nc("@label", "Camera (URL - absolute or path relative to Connection-URL)")
-                                font: UM.Theme.getFont("default")
-                                color: UM.Theme.getColor("text")
-                                renderType: Text.NativeRendering
-                            }
+                        Label {                         
+                            x: 25
+                            color: UM.Theme.getColor("text")
+                            font: UM.Theme.getFont("default")       
+                            text: catalog.i18nc("@label", "URL (absolute or path relative to Connection-URL)")
+                            renderType: Text.NativeRendering
                         }
                         Cura.TextField {
                             id: cameraUrlField
 
                             width: parent.width - 40
-                            x: 25
+                            x: 35
                             text: manager.settingsCameraUrl                 
                             maximumLength: 1024
                             onEditingFinished: { updateConfig() }
                         }
 
+                        ButtonGroup {
+                            id: cameraImageRotationValue
+                        }
+                        RowLayout {
+                            x: 25
+
+                            Cura.RadioButton {
+                                ButtonGroup.group: cameraImageRotationValue
+
+                                id: cameraImageRotation0
+
+                                text: catalog.i18nc("@label", "0°")
+                                checked: !(manager.settingsCameraImageRotation == "90" || manager.settingsCameraImageRotation == "180" || manager.settingsCameraImageRotation == "270")
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: cameraImageRotationValue
+
+                                id: cameraImageRotation90
+
+                                text: catalog.i18nc("@label", "90°")
+                                checked: manager.settingsCameraImageRotation == "90"
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: cameraImageRotationValue
+
+                                id: cameraImageRotation180
+
+                                text: catalog.i18nc("@label", "180°")
+                                checked: manager.settingsCameraImageRotation == "180"
+                                onClicked: { updateConfig() }
+                            }
+                            Cura.RadioButton {
+                                ButtonGroup.group: cameraImageRotationValue
+
+                                id: cameraImageRotation270
+
+                                text: catalog.i18nc("@label", "270°")
+                                checked: manager.settingsCameraImageRotation == "270"
+                                onClicked: { updateConfig() }
+                            }
+                            Label {                                
+                                color: UM.Theme.getColor("text")
+                                font: UM.Theme.getFont("default")       
+                                text: catalog.i18nc("@label", " Rotation")
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                        Cura.CheckBox {
+                            id: cameraImageMirror
+
+                            x: 25
+                            height: UM.Theme.getSize("checkbox").height
+                            font: UM.Theme.getFont("default")
+                            text: catalog.i18nc("@label", "Mirror")
+                            checked: manager.settingsCameraImageMirror
+                            onClicked: { updateConfig() }                           
+                        }
                     }
                 }
  

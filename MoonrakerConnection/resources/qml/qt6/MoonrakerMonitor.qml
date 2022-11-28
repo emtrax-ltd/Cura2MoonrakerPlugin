@@ -29,55 +29,66 @@ Component {
             radius: UM.Theme.getSize("default_radius").width
             cornerSide: Cura.RoundedRectangle.Direction.Left
 
-            UM.Label {
+            property bool cameraConfigured: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != ""
+            
+            UM.Label {                
                 id: cameraLabel
 
                 anchors {
                     horizontalCenter: parent.horizontalCenter;
                     verticalCenter: parent.verticalCenter;
                 }
-                color: UM.Theme.getColor(OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != "" ? "text" : "text_inactive")
+                color: UM.Theme.getColor(parent.cameraConfigured ? "text" : "text_inactive")
                 font: UM.Theme.getFont("large_bold")
-                text: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != "" ? "Camera" : "Camera not configured"
+                text: parent.cameraConfigured ? "Camera" : "Camera not configured"
             }
             UM.Label {                
                 id: cameraLabelUrl
 
-                visible: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null && OutputDevice.activePrinter.cameraUrl != ""
+                visible: parent.cameraConfigured
                 anchors {
                     horizontalCenter: cameraLabel.horizontalCenter;
                     top: cameraLabel.bottom;
                 }
                 color: UM.Theme.getColor("text_inactive")
                 font: UM.Theme.getFont("small")
-                text: "Url: " + (OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null ? OutputDevice.activePrinter.cameraUrl : "Null")
+                text: "Url: " + (parent.cameraConfigured ? OutputDevice.activePrinter.cameraUrl : "None")
             }
 
-            Cura.NetworkMJPGImage { 
-                property real scale: Math.min(Math.min((parent.width - 2 * UM.Theme.getSize("default_margin").width) / imageWidth, (parent.height - 2 * UM.Theme.getSize("default_margin").height) / imageHeight), 2);
+            Cura.NetworkMJPGImage {
+                property bool imageRotated: OutputDevice.activePrinter.cameraImageRotation == "90" || OutputDevice.activePrinter.cameraImageRotation == "270"
+                property real maxViewWidth: parent.width - 2 * UM.Theme.getSize("default_margin").width
+                property real maxViewHeight: parent.height - 2 * UM.Theme.getSize("default_margin").height
+                property real scaleFactor: {
+                    if (imageRotated) {
+                        Math.min(Math.min(maxViewWidth / imageHeight, maxViewHeight / imageWidth), 2)
+                    } else {
+                        Math.min(Math.min(maxViewWidth / imageWidth, maxViewHeight / imageHeight), 2)
+                    }
+                }
 
                 id: cameraImage;
                 anchors {
                     horizontalCenter: parent.horizontalCenter;
                     verticalCenter: parent.verticalCenter;
                 }
-                width: Math.floor(imageWidth * scale)
-                height: Math.floor(imageHeight * scale)
-                source: OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null ? OutputDevice.activePrinter.cameraUrl : ""
+                width: Math.floor(imageWidth * scaleFactor)
+                height: Math.floor(imageHeight * scaleFactor)
+                source: parent.cameraConfigured ? OutputDevice.activePrinter.cameraUrl : ""
+                rotation:  OutputDevice.activePrinter.cameraImageRotation
+                mirror: OutputDevice.activePrinter.cameraImageMirror
                 onVisibleChanged: {
-                    if (visible) {
-                        if (OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null) {
-                            cameraImage.start();
-                        }
-                    } else {
-                        if (OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null) {
-                            cameraImage.stop();
+                    if (source != "") {
+                        if (visible) {
+                            start();
+                        } else {
+                            stop();
                         }
                     }
                 }
                 Component.onCompleted: {
-                    if (OutputDevice.activePrinter != null && OutputDevice.activePrinter.cameraUrl != null) {
-                        cameraImage.start();
+                    if (source != "") {
+                        start();
                     }
                 }
             }

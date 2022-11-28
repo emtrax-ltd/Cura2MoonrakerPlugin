@@ -19,7 +19,6 @@ except ImportError:
 
 from cura.CuraApplication import CuraApplication
 from cura.PrinterOutput.PrinterOutputDevice import PrinterOutputDevice, ConnectionType
-from cura.PrinterOutput.Models.PrinterOutputModel import PrinterOutputModel
 
 from UM.i18n import i18nCatalog
 from UM.Logger import Logger
@@ -28,6 +27,7 @@ from UM.Message import Message
 from UM.OutputDevice import OutputDeviceError
 
 from .MoonrakerOutputController import MoonrakerOutputController
+from .MoonrakerOutputModel import MoonrakerOutputModel
 from .MoonrakerSettings import getConfig, saveConfig, validateUrl
 
 try:
@@ -53,7 +53,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
         super().__init__(device_id = "MoonrakerOutputDevice@" + deviceId, connection_type = ConnectionType.NetworkConnection if canConnect else ConnectionType.NotConnected)
         # init controller and model for output
         globalContainerStack = CuraApplication.getInstance().getGlobalContainerStack()
-        self._printers = [PrinterOutputModel(output_controller = MoonrakerOutputController(self), number_of_extruders = globalContainerStack.getProperty("machine_extruder_count", "value"))];
+        self._printers = [MoonrakerOutputModel(output_controller = MoonrakerOutputController(self), number_of_extruders = globalContainerStack.getProperty("machine_extruder_count", "value"))];
         Logger.log("d", "number_of_extruders: {}".format(globalContainerStack.getProperty("machine_extruder_count", "value")))
         self._printers[0].updateName(globalContainerStack.getName());
         self._printers[0].updateUniqueName(globalContainerStack.getId())
@@ -149,6 +149,8 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._translateOutput = self._config.get("trans_output", "")
             self._translateRemove = self._config.get("trans_remove", "")
             self._cameraUrl = self._config.get("camera_url", "").strip()
+            self._cameraImageRotation = self._config.get("camera_image_rotation", "0")
+            self._cameraImageMirror = self._config.get("camera_image_mirror", False)
 
             # Configure address and webcam
             self._address = self._url            
@@ -165,6 +167,8 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
                 self.activePrinter.setCameraUrl(cameraUrl)
             else:
                 self.activePrinter.setCameraUrl(QUrl())
+            self.activePrinter.setCameraImageRotation(self._cameraImageRotation)
+            self.activePrinter.setCameraImageMirror(self._cameraImageMirror)
 
             # Configure ui components
             globalContainerStack = CuraApplication.getInstance().getGlobalContainerStack()

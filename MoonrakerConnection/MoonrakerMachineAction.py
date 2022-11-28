@@ -43,6 +43,8 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsTranslateOutputChanged.emit()
         self.settingsTranslateRemoveChanged.emit()
         self.settingsCameraUrlChanged.emit()
+        self.settingsCameraImageRotationChanged.emit()
+        self.settingsCameraImageMirrorChanged.emit()
  
     def _onContainerAdded(self, container) -> None:
         # Add this action as a supported action to all machine definitions
@@ -64,6 +66,8 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsTranslateOutputChanged.emit()
         self.settingsTranslateRemoveChanged.emit()
         self.settingsCameraUrlChanged.emit()
+        self.settingsCameraImageRotationChanged.emit()
+        self.settingsCameraImageMirrorChanged.emit()
 
     settingsUrlChanged = pyqtSignal()
     settingsApiKeyChanged = pyqtSignal()
@@ -79,6 +83,8 @@ class MoonrakerMachineAction(MachineAction):
     settingsTranslateOutputChanged = pyqtSignal()
     settingsTranslateRemoveChanged = pyqtSignal()
     settingsCameraUrlChanged = pyqtSignal()
+    settingsCameraImageRotationChanged = pyqtSignal()
+    settingsCameraImageMirrorChanged = pyqtSignal()
 
     @pyqtProperty(str, notify = settingsUrlChanged)
     def settingsUrl(self) -> Optional[str]:
@@ -108,7 +114,7 @@ class MoonrakerMachineAction(MachineAction):
     @pyqtProperty(str, notify = settingsOutputFormatChanged)
     def settingsOutputFormat(self) -> Optional[str]:
         config = getConfig()
-        return config.get("output_format", "gcode" if config else "gcode")
+        return config.get("output_format", "gcode") if config else "gcode"
 
     @pyqtProperty(bool, notify = settingsUploadDialogChanged)
     def settingsUploadDialog(self) -> Optional[bool]:
@@ -150,6 +156,16 @@ class MoonrakerMachineAction(MachineAction):
         config = getConfig()
         return config.get("camera_url", "") if config else ""
 
+    @pyqtProperty(str, notify = settingsCameraImageRotationChanged)
+    def settingsCameraImageRotation(self) -> Optional[str]:
+        config = getConfig()
+        rotation = config.get("camera_image_rotation", "0") if config else "0"
+        return rotation if rotation == "90" or rotation == "180" or rotation == "270" else "0"
+
+    @pyqtProperty(bool, notify = settingsCameraImageMirrorChanged)
+    def settingsCameraImageMirror(self) -> Optional[bool]:
+        config = getConfig()
+        return config.get("camera_image_mirror", False) if config else False
 
     @pyqtSlot(QVariant)
     def saveConfig(self, paramsQJSValObj):
