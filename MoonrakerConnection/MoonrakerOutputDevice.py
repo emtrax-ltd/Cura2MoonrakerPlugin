@@ -381,7 +381,8 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
                 sleep(float(self._retryInterval))
             except ValueError:
                 sleep(0.5)
-            self._message.setText(self._getConnectMessage())
+            if (self._message):
+                self._message.setText(self._getConnectMessage())
             self._getPrinterStatus()
 
     def _onFileUploaded(self, reply: QNetworkReply) -> None:
