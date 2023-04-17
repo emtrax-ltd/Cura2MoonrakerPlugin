@@ -44,10 +44,12 @@ class MoonrakerOutputDevicePlugin(OutputDevicePlugin):
                 if canConnect != self._currentMoonrakerOutputDevice._canConnect:
                     self._currentMoonrakerOutputDevice = None
                     self._moonrakerOutputDevices.pop(deviceId)
-            if not self._currentMoonrakerOutputDevice:
-                self._currentMoonrakerOutputDevice = MoonrakerOutputDevice(deviceId, canConnect)
-                self._moonrakerOutputDevices[deviceId] = self._currentMoonrakerOutputDevice
-            self.getOutputDeviceManager().addOutputDevice(self._currentMoonrakerOutputDevice)
+            if config:
+                if not self._currentMoonrakerOutputDevice:
+                    self._currentMoonrakerOutputDevice = MoonrakerOutputDevice(deviceId, canConnect)
+                    self._moonrakerOutputDevices[deviceId] = self._currentMoonrakerOutputDevice
+                self.getOutputDeviceManager().addOutputDevice(self._currentMoonrakerOutputDevice)
 
         # update config of device
-        self._currentMoonrakerOutputDevice.updateConfig(config);
+        if self._currentMoonrakerOutputDevice:
+            self._currentMoonrakerOutputDevice.updateConfig(config);

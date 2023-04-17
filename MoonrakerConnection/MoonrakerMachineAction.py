@@ -33,6 +33,7 @@ class MoonrakerMachineAction(MachineAction):
         CuraApplication.getInstance().getContainerRegistry().containerAdded.connect(self._onContainerAdded)
 
     def _onGlobalContainerStackChanged(self) -> None:
+        self.settingsExistsChanged.emit()
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
@@ -56,6 +57,7 @@ class MoonrakerMachineAction(MachineAction):
             CuraApplication.getInstance().getMachineActionManager().addSupportedAction(container.getId(), self.getKey())
 
     def _reset(self) -> None:
+        self.settingsExistsChanged.emit()
         self.settingsUrlChanged.emit()
         self.settingsApiKeyChanged.emit()
         self.settingsPowerDeviceChanged.emit()
@@ -73,6 +75,7 @@ class MoonrakerMachineAction(MachineAction):
         self.settingsCameraImageRotationChanged.emit()
         self.settingsCameraImageMirrorChanged.emit()
 
+    settingsExistsChanged = pyqtSignal()
     settingsUrlChanged = pyqtSignal()
     settingsApiKeyChanged = pyqtSignal()
     settingsPowerDeviceChanged = pyqtSignal()
@@ -89,6 +92,13 @@ class MoonrakerMachineAction(MachineAction):
     settingsCameraUrlChanged = pyqtSignal()
     settingsCameraImageRotationChanged = pyqtSignal()
     settingsCameraImageMirrorChanged = pyqtSignal()
+
+    @pyqtProperty(bool, notify = settingsExistsChanged)
+    def settingsExists(self) -> Optional[bool]:
+        config = getConfig()
+        if config:
+            return True
+        return False
 
     @pyqtProperty(str, notify = settingsUrlChanged)
     def settingsUrl(self) -> Optional[str]:

@@ -25,25 +25,47 @@ Cura.MachineAction {
         return cameraImageRotation90.checked ? "90" : cameraImageRotation180.checked ? "180" : cameraImageRotation270.checked ? "270" : "0"
     }
 
-    function updateConfig() {
-        manager.saveConfig({
-            url: urlField.text,
-            api_key: apiKeyField.text,
-            power_device: powerDeviceField.text,
-            retry_interval: retryIntervalField.text,
-            frontend_url: frontendUrlField.text,
-            output_format: outputFormat(),
-            upload_dialog: uploadDialogVisible.checked,
-            upload_start_print_job: uploadStartPrintJobBox.checked,
-            upload_remember_state: uploadRememberStateBox.checked,
-            upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
-            trans_input: translateInputField.text,
-            trans_output: translateOutputField.text,
-            trans_remove: translateRemoveField.text,
-            camera_url: cameraUrlField.text,
-            camera_image_rotation: cameraImageRotation(),
-            camera_image_mirror: cameraImageMirror.checked
-        })
+    function save(closeDialog) {
+        if (removeOnSave.checked) {
+            manager.deleteConfig()
+        } else {
+            manager.saveConfig({
+                url: urlField.text,
+                api_key: apiKeyField.text,
+                power_device: powerDeviceField.text,
+                retry_interval: retryIntervalField.text,
+                frontend_url: frontendUrlField.text,
+                output_format: outputFormat(),
+                upload_dialog: uploadDialogVisible.checked,
+                upload_start_print_job: uploadStartPrintJobBox.checked,
+                upload_remember_state: uploadRememberStateBox.checked,
+                upload_autohide_messagebox: uploadAutohideMessageboxBox.checked,
+                trans_input: translateInputField.text,
+                trans_output: translateOutputField.text,
+                trans_remove: translateRemoveField.text,
+                camera_url: cameraUrlField.text,
+                camera_image_rotation: cameraImageRotation(),
+                camera_image_mirror: cameraImageMirror.checked
+            })
+        }
+        removeOnSave.checked = false
+        if (closeDialog) {
+            actionDialog.close()
+        }
+    }
+
+    function cancel(closeDialog) {
+        removeOnSave.checked = false
+        if (closeDialog) {
+            actionDialog.close()
+        }
+    }
+
+    Connections {
+        target: actionDialog
+        onAccepted: save(false)
+        onRejected: cancel(false)
+        onClosing: cancel(false)
     }
 
     ListModel {
@@ -56,7 +78,6 @@ Cura.MachineAction {
             append({ name: catalog.i18nc("@title:tab", "Connection") })
             append({ name: catalog.i18nc("@title:tab", "Upload") })
             append({ name: catalog.i18nc("@title:tab", "Monitor") })
-
         }
     }
 
@@ -81,6 +102,7 @@ Cura.MachineAction {
         anchors {
             top: machineLabel.bottom
             topMargin: UM.Theme.getSize("default_margin").height
+            bottomMargin: UM.Theme.getSize("default_margin").height
         }
         width: parent.width
 
@@ -99,7 +121,8 @@ Cura.MachineAction {
         anchors {
             top: tabBar.bottom
             topMargin: -UM.Theme.getSize("default_lining").height
-            bottom: parent.bottom
+            bottom: actionButtons.top
+            bottomMargin: UM.Theme.getSize("default_margin").height
             left: parent.left
             right: parent.right
         }
@@ -135,10 +158,6 @@ Cura.MachineAction {
 
                         spacing: UM.Theme.getSize("default_margin").height
 
-                        Item {
-                            width: parent.width
-                            height: 10
-                        }
                         RowLayout {
                             width: parent.width
                             x: 15
@@ -162,7 +181,6 @@ Cura.MachineAction {
                             text: manager.settingsUrl
                             maximumLength: 1024
                             onTextChanged: base.validUrl = manager.validUrl(urlField.text)
-                            onEditingFinished: { updateConfig() }
                         }
 
                         Item {
@@ -180,7 +198,6 @@ Cura.MachineAction {
                             x: 25
                             text: manager.settingsApiKey
                             maximumLength: 1024
-                            onEditingFinished: { updateConfig() }
                         }
 
                         Item {
@@ -198,7 +215,6 @@ Cura.MachineAction {
                             x: 25
                             text: manager.settingsPowerDevice
                             maximumLength: 1024
-                            onEditingFinished: { updateConfig() }
                         }
 
                         Item {
@@ -228,7 +244,6 @@ Cura.MachineAction {
                             text: manager.settingsRetryInterval
                             maximumLength: 1024
                             onTextChanged: base.validRetryInterval = manager.validRetryInterval(retryIntervalField.text)
-                            onEditingFinished: { updateConfig() }
                         }
 
                         Item {
@@ -258,7 +273,6 @@ Cura.MachineAction {
                             text: manager.settingsFrontendUrl
                             maximumLength: 1024
                             onTextChanged: base.validFrontendUrl = manager.validUrl(frontendUrlField.text)
-                            onEditingFinished: { updateConfig() }
                         }
                     }
                 }
@@ -282,10 +296,6 @@ Cura.MachineAction {
 
                         spacing: UM.Theme.getSize("default_margin").height
 
-                        Item {
-                         width: parent.width
-                            height: 10
-                        }
                         UM.Label {
                             x: 15
                             text: catalog.i18nc("@label", "Format")
@@ -303,7 +313,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "G-code")
                                 checked: manager.settingsOutputFormat != "ufp"
-                                onClicked: { updateConfig() }
                             }
                             Cura.RadioButton {
                                 ButtonGroup.group: outputFormatValue
@@ -312,7 +321,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "UFP with Thumbnail")
                                 checked: manager.settingsOutputFormat == "ufp"
-                                onClicked: { updateConfig() }
                             }
                         }
 
@@ -337,7 +345,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "Upload Dialog")
                                 checked: manager.settingsUploadDialog
-                                onClicked: { updateConfig() }
                             }
                             Cura.RadioButton {
                                 ButtonGroup.group: uploadDialogValue
@@ -346,7 +353,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "Fire & Forget")
                                 checked: !manager.settingsUploadDialog
-                                onClicked: { updateConfig() }
                             }
                         }
                         UM.CheckBox {
@@ -356,7 +362,6 @@ Cura.MachineAction {
                             text: catalog.i18nc("@label", "Automatic start of print job after upload")
                             checked: manager.settingsUploadStartPrintJob
                             visible: uploadDialogBypass.checked
-                            onClicked: { updateConfig() }                           
                         }
                         UM.CheckBox {
                             id: uploadRememberStateBox
@@ -365,7 +370,6 @@ Cura.MachineAction {
                             text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
                             checked: manager.settingsUploadRememberState
                             visible: uploadDialogVisible.checked
-                            onClicked: { updateConfig() }
                         }
                         UM.CheckBox {
                             id: uploadAutohideMessageboxBox
@@ -373,7 +377,6 @@ Cura.MachineAction {
                             x: 25
                             text: catalog.i18nc("@label", "Auto hide messagebox for successful upload (30 seconds)")
                             checked: manager.settingsUploadAutohideMessagebox
-                            onClicked: { updateConfig() }
                         }
 
                         Item {
@@ -411,7 +414,6 @@ Cura.MachineAction {
                                     text: manager.settingsTranslateInput
                                     maximumLength: 128
                                     onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
-                                    onEditingFinished: { updateConfig() }
                                 }
                             }
                         
@@ -430,7 +432,6 @@ Cura.MachineAction {
                                     text: manager.settingsTranslateOutput
                                     maximumLength: 128
                                     onTextChanged: base.validTranslation = manager.validTranslation(translateInputField.text, translateOutputField.text)
-                                    onEditingFinished: { updateConfig() }
                                 }
                             }
                         
@@ -448,7 +449,6 @@ Cura.MachineAction {
                                     width: parent.width
                                     text: manager.settingsTranslateRemove
                                     maximumLength: 128
-                                    onEditingFinished: { updateConfig() }
                                 }
                             }
                         }
@@ -485,10 +485,6 @@ Cura.MachineAction {
 
                         spacing: UM.Theme.getSize("default_margin").height
 
-                        Item {
-                            width: parent.width
-                            height: 10
-                        }
                         UM.Label {
                             x: 15
                             text: catalog.i18nc("@label", "Camera")
@@ -505,7 +501,6 @@ Cura.MachineAction {
                             x: 35
                             text: manager.settingsCameraUrl                 
                             maximumLength: 1024
-                            onEditingFinished: { updateConfig() }
                         }
 
                         ButtonGroup {
@@ -521,7 +516,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "0°")
                                 checked: !(manager.settingsCameraImageRotation == "90" || manager.settingsCameraImageRotation == "180" || manager.settingsCameraImageRotation == "270")
-                                onClicked: { updateConfig() }
                             }
                             Cura.RadioButton {
                                 ButtonGroup.group: cameraImageRotationValue
@@ -530,7 +524,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "90°")
                                 checked: manager.settingsCameraImageRotation == "90"
-                                onClicked: { updateConfig() }
                             }
                             Cura.RadioButton {
                                 ButtonGroup.group: cameraImageRotationValue
@@ -539,7 +532,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "180°")
                                 checked: manager.settingsCameraImageRotation == "180"
-                                onClicked: { updateConfig() }
                             }
                             Cura.RadioButton {
                                 ButtonGroup.group: cameraImageRotationValue
@@ -548,7 +540,6 @@ Cura.MachineAction {
 
                                 text: catalog.i18nc("@label", "270°")
                                 checked: manager.settingsCameraImageRotation == "270"
-                                onClicked: { updateConfig() }
                             }
                             UM.Label {
                                 text: catalog.i18nc("@label", " Rotation")
@@ -560,7 +551,6 @@ Cura.MachineAction {
                             x: 25
                             text: catalog.i18nc("@label", "Mirror")
                             checked: manager.settingsCameraImageMirror
-                            onClicked: { updateConfig() }                           
                         }
                     }
                 }
@@ -569,4 +559,48 @@ Cura.MachineAction {
         }
     }
 
+    Item {
+        id: actionButtons
+
+        anchors{
+            bottom: parent.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: UM.Theme.getSize("default_margin").height
+        }
+
+        Flow  {
+            Layout.fillWidth: true
+            layoutDirection: Qt.RightToLeft 
+            anchors.fill: parent
+            spacing: UM.Theme.getSize("default_margin").width
+
+            Cura.SecondaryButton {
+                id: cancelButton
+                text: catalog.i18nc("@action:button", "Cancel")
+                onClicked: { cancel(true) }
+            }
+
+            Cura.PrimaryButton {
+                id: saveButton
+                text: catalog.i18nc("@action:button", "Save")
+                visible: manager.settingsExists
+                onClicked: { save(true) }
+            }
+
+            Cura.PrimaryButton {
+                id: createButton
+                text: catalog.i18nc("@action:button", "Create")
+                visible: !manager.settingsExists
+                onClicked: { save(true) }
+            }
+
+            UM.CheckBox {
+                id: removeOnSave
+                text: catalog.i18nc("@label", "Remove connection")
+                checked: false
+                visible: manager.settingsExists
+            }
+        }
+    }
 }
