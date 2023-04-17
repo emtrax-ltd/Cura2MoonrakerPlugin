@@ -567,6 +567,7 @@ Cura.MachineAction {
             left: parent.left
             right: parent.right
             topMargin: UM.Theme.getSize("default_margin").height
+            bottomMargin: UM.Theme.getSize("default_margin").height
         }
 
         Flow  {
