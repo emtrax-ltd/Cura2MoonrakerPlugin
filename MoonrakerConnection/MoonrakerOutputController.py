@@ -1,10 +1,14 @@
 USE_QT5 = False
 try:
+    from cura.ApplicationMetadata import CuraSDKVersion
+except ImportError: # Cura <= 3.6   
+    CuraSDKVersion = "6.0.0"
+if CuraSDKVersion >= "8.0.0":
     from PyQt6.QtCore import QTimer
-except ImportError:
+else:
     from PyQt5.QtCore import QTimer
     USE_QT5 = True
-
+    
 from cura.PrinterOutput.PrinterOutputDevice import PrinterOutputDevice
 from cura.PrinterOutput.PrinterOutputController import PrinterOutputController
 

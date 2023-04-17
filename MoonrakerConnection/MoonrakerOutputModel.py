@@ -1,7 +1,11 @@
 USE_QT5 = False
 try:
+    from cura.ApplicationMetadata import CuraSDKVersion
+except ImportError: # Cura <= 3.6   
+    CuraSDKVersion = "6.0.0"
+if CuraSDKVersion >= "8.0.0":
     from PyQt6.QtCore import pyqtProperty, pyqtSignal
-except ImportError:
+else:
     from PyQt5.QtCore import pyqtProperty, pyqtSignal
     USE_QT5 = True
     

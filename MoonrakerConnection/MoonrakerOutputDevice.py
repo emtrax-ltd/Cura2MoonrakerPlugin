@@ -8,10 +8,14 @@ from time import sleep
 
 USE_QT5 = False
 try:
+    from cura.ApplicationMetadata import CuraSDKVersion
+except ImportError: # Cura <= 3.6   
+    CuraSDKVersion = "6.0.0"
+if CuraSDKVersion >= "8.0.0":
     from PyQt6.QtCore import QByteArray, QObject, QUrl, QVariant, pyqtSlot, pyqtProperty
     from PyQt6.QtGui import QDesktopServices
     from PyQt6.QtNetwork import QNetworkRequest, QNetworkReply, QHttpMultiPart, QHttpPart
-except ImportError:
+else:
     from PyQt5.QtCore import QByteArray, QObject, QUrl, QVariant, pyqtSlot, pyqtProperty
     from PyQt5.QtGui import QDesktopServices
     from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply, QHttpMultiPart, QHttpPart
