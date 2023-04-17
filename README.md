@@ -8,16 +8,11 @@ The installation of this plugin is straightforward, no compiling, etc.
 
 1. Download this repository as zip file (https://github.com/emtrax-ltd/Cura2MoonrakerPlugin/archive/main.zip) and unzip it.
 2. Find your Cura plugins directory:
-   * Windows:
-      * The default installation path is `C:\Program Files\Ultimaker Cura [version number]\plugins`.
-      * The user based installation path is `C:\Users\<Your Username>\AppData\Roaming\cura\[version number]\plugins` (no admin privileges needed)
-   * macOS:
-      * Right-click on `Ultimaker Cura.app` in your `Applications` folder then click on `Show Package Contents`. 
-        * In Cura 4.x or older, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> Plugins -> Plugins`.
-        * In Cura 5.x or newer, the default installation path is `Ultimaker Cura.app -> Contents -> Resources -> share -> cura -> plugins`. 
-   * Linux:
-      * The user based installation path is at `~/.local/share/cura/[version number]/plugins`.
-3. Copy the extracted folder `MoonrakerConnection` into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. It looks like `...\cura\[version number]\plugins\MoonrakerConnection\MoonrakerConnection`. Check that installation of the previously released folder 'MoonrakerPlugin' is completely removed!
+   * In Cura menu click "Help" -> "Show Configuration Folder" and then open the "plugins" subdirectory
+     * Windows: `%APPDATA%\Roaming\cura\[version number]\plugins`
+     * macOS: `$HOME/Library/Application Support/cura/[version number]/plugins`
+     * Linux: `$HOME/.local/share/cura/[version number]/plugins`.
+3. Copy the extracted folder `MoonrakerConnection` into the Cura plugins folder you located in step 2. Attention: In the user based windows installation you have to copy the unzipped plugin directory into a parent directory with the same name. It looks like `...\cura\[version number]\plugins\MoonrakerConnection\MoonrakerConnection`.
 4. If Cura is already running: quit, and restart it.
 
 ## How to Configure
@@ -26,7 +21,7 @@ To configure your Moonraker 3D printer:
 2. Select <Your Printername> and click on `Connect Moonraker`.
 3. Fill in the URL and select your preferred output format.
 4. Optionally, configure one or more power devices to turn on before starting print.
-5. Click `Close` - all changes will be saved automatically.
+5. Finally click `Create` or `Save`.
 
 ## How to Upload
 1. Open your STL model in Cura and click `Slice`.
