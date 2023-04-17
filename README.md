@@ -19,7 +19,7 @@ The installation of this plugin is straightforward, no compiling, etc.
 To configure your Moonraker 3D printer:
 1. Go to `Settings` -> `Printer` -> `Manage Printers`.
 2. Select <Your Printername> and click on `Connect Moonraker`.
-3. Fill in the URL and select your preferred output format.
+3. Fill in the URL and select your preferred output format. Sometimes it is necessary to specify the port within the URL - the value for this can be found in `moonraker.conf`.
 4. Optionally, configure one or more power devices to turn on before starting print.
 5. Finally click `Create` or `Save`.
 
