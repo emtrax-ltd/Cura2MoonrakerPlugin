@@ -463,7 +463,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
                     part_print.setBody(b"true")
                     parts.append(part_print)
 
-                headers['Content-Type'] = 'multipart/form-data; boundary='+ str(parts.boundary().data(), encoding = 'utf-8')
+                headers['Content-Type'] = 'multipart/form-data; boundary="'+ str(parts.boundary().data(), encoding = 'utf-8') + '"'
 
                 postData = parts
             else:
