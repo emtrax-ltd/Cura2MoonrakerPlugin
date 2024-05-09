@@ -35,8 +35,8 @@ Component {
                 id: cameraLabel
 
                 anchors {
-                    horizontalCenter: parent.horizontalCenter;
-                    verticalCenter: parent.verticalCenter;
+                    horizontalCenter: parent.horizontalCenter
+                    verticalCenter: parent.verticalCenter
                 }
                 color: UM.Theme.getColor(parent.cameraConfigured ? "text" : "text_inactive")
                 font: UM.Theme.getFont("large_bold")
@@ -47,8 +47,8 @@ Component {
 
                 visible: parent.cameraConfigured
                 anchors {
-                    horizontalCenter: cameraLabel.horizontalCenter;
-                    top: cameraLabel.bottom;
+                    horizontalCenter: cameraLabel.horizontalCenter
+                    top: cameraLabel.bottom
                 }
                 color: UM.Theme.getColor("text_inactive")
                 font: UM.Theme.getFont("small")
@@ -67,10 +67,10 @@ Component {
                     }
                 }
 
-                id: cameraImage;
+                id: cameraImage
                 anchors {
-                    horizontalCenter: parent.horizontalCenter;
-                    verticalCenter: parent.verticalCenter;
+                    horizontalCenter: parent.horizontalCenter
+                    verticalCenter: parent.verticalCenter
                 }
                 width: Math.floor(imageWidth * scaleFactor)
                 height: Math.floor(imageHeight * scaleFactor)
@@ -80,15 +80,15 @@ Component {
                 onVisibleChanged: {
                     if (source != "") {
                         if (visible) {
-                            start();
+                            start()
                         } else {
-                            stop();
+                            stop()
                         }
                     }
                 }
                 Component.onCompleted: {
                     if (source != "") {
-                        start();
+                        start()
                     }
                 }
             }
