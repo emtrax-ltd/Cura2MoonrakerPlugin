@@ -293,19 +293,18 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._sendRequest('machine/device_power/device?' + urllib.parse.urlencode({'device': powerDevice, 'action': 'on'}), data = '{}'.encode(), dataIsJSON = True, on_success = self._getPrinterStatus if index == 0 else None)
 
     def _getPrinterStatus(self, reply: QNetworkReply = None) -> None:
-        self._sendRequest('printer/info', on_success = self._checkPrinterStatus, on_error = self._onPrinterError)
+        self._sendRequest('server/info', on_success = self._checkPrinterStatus, on_error = self._onPrinterError)
 
     def _checkPrinterStatus(self, reply: QNetworkReply) -> None:
         response = self._getResponse(reply)
-        status = response['result']['state']
-        message = response['result']['state_message']
+        status = response['result']['klippy_state']
 
-        if self._startPrint and status == 'ready' or not self._startPrint and status != 'error':
-            # status == 'ready' => printer is online || status != 'error' => upload possible
+        if self._startPrint and status == 'ready' or not self._startPrint:
+            # startPrint & status == 'ready' => printer is online || no startPrint => upload only
             self._onPrinterOnline(reply)
         else:
             # printer is not ready => increase timeoutCounter
-            self._onPrinterError(reply, "The status of the printer is '{}'.\n\n{}".format(status, message.strip()))
+            self._onPrinterError(reply, "The status of the printer is '{}'.\n\n{}".format(status, status.strip()))
 
     def _onPrinterOnline(self, reply: QNetworkReply) -> None:
         # remove connection timeout message
