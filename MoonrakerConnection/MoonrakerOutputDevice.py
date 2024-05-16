@@ -1,5 +1,6 @@
 import json
 import os.path
+import re
 import urllib.parse
 from enum import Enum
 from io import BytesIO, StringIO
@@ -57,9 +58,9 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
         super().__init__(device_id = "MoonrakerOutputDevice@" + deviceId, connection_type = ConnectionType.NetworkConnection if canConnect else ConnectionType.NotConnected)
         # init controller and model for output
         globalContainerStack = CuraApplication.getInstance().getGlobalContainerStack()
-        self._printers = [MoonrakerOutputModel(output_controller = MoonrakerOutputController(self), number_of_extruders = globalContainerStack.getProperty("machine_extruder_count", "value"))];
+        self._printers = [MoonrakerOutputModel(output_controller = MoonrakerOutputController(self), number_of_extruders = globalContainerStack.getProperty("machine_extruder_count", "value"))]
         Logger.log("d", "number_of_extruders: {}".format(globalContainerStack.getProperty("machine_extruder_count", "value")))
-        self._printers[0].updateName(globalContainerStack.getName());
+        self._printers[0].updateName(globalContainerStack.getName())
         self._printers[0].updateUniqueName(globalContainerStack.getId())
         self._printers[0].updateBuildplate(globalContainerStack.getProperty("machine_buildplate_type", "value"))
         # configure ui components
@@ -110,26 +111,29 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             translatedFileName = fileName.translate(fileName.maketrans(self._translateInput, self._translateOutput, self._translateRemove if self._translateRemove else ""))
             fileName = translatedFileName
 
+        self._pathName = re.sub(r'^[\s/]+|[\s/]+$', '', self._uploadPath)
         self._fileName = fileName  + "." + self._outputFormat
 
         if self._uploadDialog:
             # Display upload dialog
-            qmlUrl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerUpload.qml')        
+            qmlUrl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'qt5' if USE_QT5 else 'qt6', 'MoonrakerUpload.qml')
             self._dialog = CuraApplication.getInstance().createQmlComponent(qmlUrl, {"manager": self})
+            self._dialog.pathesChanged.connect(self._onUploadPathesChanged)
             self._dialog.textChanged.connect(self._onUploadFilenameChanged)
             self._dialog.accepted.connect(self._onUploadFilenameAccepted)
             self._dialog.show()
+            self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
+            self._dialog.findChild(QObject, "pathField").setProperty('path', self._pathName)
+            self._dialog.findChild(QObject, "pathField").setProperty('pathes', self._uploadPathes)
             self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
             self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(self._outputFormat) - 1)
-            self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
-            self._dialog.findChild(QObject, "printField").setProperty('checked', self._uploadStartPrintJob)
         else:
             # Bypass upload dialog
             self._onUploadFilenameAccepted()
-
+    
     def updateConfig(self, config: dict = None) -> None:
         if self._stage != OutputStage.Ready:
-            raise OutputDeviceError.DeviceBusyError();
+            raise OutputDeviceError.DeviceBusyError()
 
         if not config:
             config = getConfig()
@@ -146,6 +150,8 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             if self._outputFormat and self._outputFormat != "ufp":
                 self._outputFormat = "gcode"
             self._uploadDialog = self._config.get("upload_dialog", True)
+            self._uploadPath = self._config.get("upload_path", "")
+            self._uploadPathes = self._config.get("upload_pathes", [])
             self._uploadStartPrintJob = self._config.get("upload_start_print_job", False)
             self._uploadRememberState = self._config.get("upload_remember_state", False)
             self._uploadAutohideMessagebox = self._config.get("upload_autohide_messagebox", False)
@@ -202,57 +208,95 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
         if self._stream:
             self._stream.close()
         self._stream = None
+        self._pathName = None
         self._fileName = None
         self._startPrint = None
         self._postData = None
         self._errorCounter = 0
         self._stage = OutputStage.Ready
 
+    def _onUploadPathesChanged(self, pathes: QVariant) -> None:
+        if pathes:
+            self._uploadPathes = pathes.toVariant()
+            Logger.log("d", "Pathes for upload set to '{}'.".format(self._uploadPathes))
+            config = getConfig()
+            config["upload_pathes"] = self._uploadPathes
+            saveConfig(config)
+
     def _onUploadFilenameChanged(self) -> None:
+        pathName = self._dialog.findChild(QObject, "pathField").property('path').strip()
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
+        validPath = True
+        validName = True
+        validationPathError = ''
+        validationNameError = ''
 
         # Check forbidden characters
         forbidden_characters = ":*?\"<>|"
+
+        for forbidden_character in forbidden_characters:
+            if forbidden_character in pathName:
+                validPath = False
+                validationPathError = '*cannot contain {}'.format(forbidden_characters)
+                break
+
         for forbidden_character in forbidden_characters:
             if forbidden_character in fileName:
-                self._dialog.setProperty('validName', False)
-                self._dialog.setProperty('validationError', '*cannot contain {}'.format(forbidden_characters))
-                return
+                validName = False
+                validationNameError = '*cannot contain {}'.format(forbidden_characters)
+                break
 
-        # Check forbidden filenames
-        if fileName == '.' or fileName == '..':
-            self._dialog.setProperty('validName', False)
-            self._dialog.setProperty('validationError', '*cannot be "." or ".."')
-            return
+        # Check forbidden names
+        if validPath and (pathName == '.' or pathName == '..'):
+            validPath = False
+            validationPathError = '*cannot be "." or ".."'
+
+        if validName and (fileName == '.' or fileName == '..'):
+            validName = False
+            validationNameError = '*cannot be "." or ".."'
 
         # Check length of filename
-        self._dialog.setProperty('validName', len(fileName) > 0)
-        self._dialog.setProperty('validationError', 'Filename too short')
+        if validName and len(fileName) < 1:
+            validName = False
+            validationNameError = 'Filename too short'
+
+        self._dialog.setProperty('validPath', validPath)
+        self._dialog.setProperty('validationPathError', validationPathError)
+        self._dialog.setProperty('validName', validName)
+        self._dialog.setProperty('validationNameError', validationNameError)
 
     def _onUploadFilenameAccepted(self) -> None:
-        # Resolve filename
+        pathName = self._uploadPath
+        fileName = self._fileName
+        startPrint = self._uploadStartPrintJob
+
         if self._uploadDialog:
-            self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()          
+            pathName = self._dialog.findChild(QObject, "pathField").property('path').strip()
+            fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()  
+            startPrint = self._dialog.findChild(QObject, "printField").property('checked')       
+            if self._uploadRememberState:
+                self._uploadPath = pathName = re.sub(r'^[\s/]+|[\s/]+$', '', pathName)
+                config = getConfig()
+                config["upload_path"] = re.sub(r'^[\s/]+|[\s/]+$', '', pathName)
+                config["upload_start_print_job"] = startPrint
+                saveConfig(config)
+            self._dialog.deleteLater()       
+
+        # Resolve pathname
+        self._pathName = re.sub(r'^[\s/]+|[\s/]+$', '', pathName)
+        Logger.log("d", "Pathname set to '{}'.".format(self._pathName))
+
+        # Resolve filename
+        self._fileName = fileName
         if not self._fileName.endswith('.' + self._outputFormat) and '.' not in self._fileName:
             self._fileName += '.' + self._outputFormat
-        Logger.log("d", "FileName set to {}.".format(self._fileName))
+        Logger.log("d", "Filename set to '{}'.".format(self._fileName))
 
-        # Resolve start of print job
-        if self._uploadDialog:
-            self._startPrint = self._dialog.findChild(QObject, "printField").property('checked')
-            if self._uploadRememberState:
-                self._uploadStartPrintJob = self._startPrint
-                config = getConfig()
-                config["upload_start_print_job"] = self._startPrint
-                saveConfig(config)
-        else:
-            self._startPrint = self._uploadStartPrintJob
-        Logger.log("d", "StartPrint set to {}.".format(str(self._startPrint)))
+        # Resolve startPrint
+        self._startPrint = startPrint
+        Logger.log("d", "StartPrint set to '{}'.".format(self._startPrint))
 
-        if self._uploadDialog:
-            self._dialog.deleteLater()       
         Logger.log("i", "Connecting to Moonraker at {}.".format(self._url))
-
         # Show a message with status of connection
         messageText = self._getConnectMessage()
         self._message = Message(catalog.i18nc("@info:status", messageText), 0, False)
@@ -324,14 +368,14 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
             self._onError(reply)
             return
 
-        Logger.log("i", "Uploading file '{}' [format: {}].".format(self._fileName, self._outputFormat))
+        Logger.log("i", "Uploading file '{}' [path: {}; format: {}].".format(self._fileName, self._pathName, self._outputFormat))
         self._stream.seek(0)
         self._postData = QByteArray()
         if isinstance(self._stream, BytesIO):
             self._postData.append(self._stream.getvalue())
         else:
             self._postData.append(self._stream.getvalue().encode())
-        self._sendRequest('server/files/upload', name = self._fileName, data = self._postData, on_success = self._onFileUploaded)    
+        self._sendRequest('server/files/upload', pathName = self._pathName, fileName = self._fileName, data = self._postData, on_success = self._onFileUploaded)    
     
     def _onPrinterError(self, reply: QNetworkReply = None, error = None) -> None:
         self._errorCounter += 1        
@@ -390,7 +434,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
 
         return response
 
-    def _sendRequest(self, path: str, name: str = None, data: QByteArray = None, dataIsJSON: bool = False, on_success = None, on_error = None) -> None:
+    def _sendRequest(self, path: str, pathName: str = None, fileName: str = None, data: QByteArray = None, dataIsJSON: bool = False, on_success = None, on_error = None) -> None:
         url = self._url + path
 
         headers = {'User-Agent': 'Cura Plugin Moonraker', 'Accept': 'application/json, text/plain', 'Connection': 'keep-alive'}
@@ -405,7 +449,7 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
                 parts = QHttpMultiPart(FormDataType)
 
                 part_file = QHttpPart()
-                part_file.setHeader(ContentDispositionHeader, QVariant('form-data; name="file"; filename="/' + name + '"'))
+                part_file.setHeader(ContentDispositionHeader, QVariant('form-data; name="file"; filename="' + fileName + '"'))
                 part_file.setHeader(ContentTypeHeader, QVariant('application/octet-stream'))
                 part_file.setBody(data)
                 parts.append(part_file)
@@ -414,6 +458,12 @@ class MoonrakerOutputDevice(PrinterOutputDevice):
                 part_root.setHeader(ContentDispositionHeader, QVariant('form-data; name="root"'))
                 part_root.setBody(b"gcodes")
                 parts.append(part_root)
+
+                if pathName:
+                    part_path = QHttpPart()
+                    part_path.setHeader(ContentDispositionHeader, QVariant('form-data; name="path"'))
+                    part_path.setBody(pathName.encode("UTF-8"))
+                    parts.append(part_path)
 
                 if self._startPrint:
                     part_print = QHttpPart()

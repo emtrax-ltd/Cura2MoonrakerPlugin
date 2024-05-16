@@ -6,8 +6,7 @@ import UM 1.5 as UM
 import Cura 1.1 as Cura
 
 Cura.MachineAction {
-
-    UM.I18nCatalog { id: catalog; name: "cura" }
+    property variant catalog: UM.I18nCatalog { id: catalog; name: "cura" }
 
     id: base
     anchors.fill: parent
@@ -108,6 +107,7 @@ Cura.MachineAction {
         anchors {
             top: machineLabel.bottom
             topMargin: UM.Theme.getSize("default_margin").height
+            bottomMargin: UM.Theme.getSize("default_margin").height
         }
         width: parent.width
 
@@ -402,7 +402,7 @@ Cura.MachineAction {
                             height: UM.Theme.getSize("checkbox").height
                             font: UM.Theme.getFont("default")
 
-                            text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
+                            text: catalog.i18nc("@label", "Remember state of \"Path\" and \"Start print job\"")
                             checked: manager.settingsUploadRememberState
                             visible: uploadDialogVisible.checked
                         }
@@ -622,13 +622,14 @@ Cura.MachineAction {
     }
 
     Item {
-        id: actionButtons
+        id: actionButtons      
 
         anchors{
             bottom: parent.bottom
             left: parent.left
             right: parent.right
             topMargin: UM.Theme.getSize("default_margin").height
+            bottomMargin: UM.Theme.getSize("default_margin").height
         }
 
         Flow  {
@@ -659,14 +660,14 @@ Cura.MachineAction {
 
             Cura.CheckBox {
                 id: removeOnSave
-                anchors{                    
+                anchors { 
                     rightMargin: UM.Theme.getSize("default_margin").height * 4
                 }
                 height: UM.Theme.getSize("checkbox").height
                 font: UM.Theme.getFont("default")
                 text: catalog.i18nc("@label", "Remove connection")
                 checked: false
-                visible: manager.settingsExists
+                visible: manager.settingsExists      
             }
         }
     }

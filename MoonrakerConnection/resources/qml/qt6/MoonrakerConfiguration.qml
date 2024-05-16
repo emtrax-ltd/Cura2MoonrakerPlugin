@@ -6,8 +6,7 @@ import UM 1.5 as UM
 import Cura 1.1 as Cura
 
 Cura.MachineAction {
-
-    UM.I18nCatalog { id: catalog; name: "cura" }
+    property variant catalog: UM.I18nCatalog { id: catalog; name: "cura" }
 
     id: base
     anchors.fill: parent
@@ -367,7 +366,7 @@ Cura.MachineAction {
                             id: uploadRememberStateBox
 
                             x: 25
-                            text: catalog.i18nc("@label", "Remember state of \"Start print job\"")
+                            text: catalog.i18nc("@label", "Remember state of \"Path\" and \"Start print job\"")
                             checked: manager.settingsUploadRememberState
                             visible: uploadDialogVisible.checked
                         }
@@ -561,7 +560,7 @@ Cura.MachineAction {
 
     Item {
         id: actionButtons
-
+        
         anchors{
             bottom: parent.bottom
             left: parent.left

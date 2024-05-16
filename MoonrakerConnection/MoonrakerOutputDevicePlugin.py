@@ -10,7 +10,7 @@ class MoonrakerOutputDevicePlugin(OutputDevicePlugin):
     def __init__(self) -> None:
         super().__init__()
         Logger.log("d", "Initialising plugin.")
-        initConfig();
+        initConfig()
         self._moonrakerOutputDevices = {}
         self._currentMoonrakerOutputDevice = None
         CuraApplication.getInstance().globalContainerStackChanged.connect(self._checkMoonrakerOutputDevice)
@@ -52,4 +52,4 @@ class MoonrakerOutputDevicePlugin(OutputDevicePlugin):
 
         # update config of device
         if self._currentMoonrakerOutputDevice:
-            self._currentMoonrakerOutputDevice.updateConfig(config);
+            self._currentMoonrakerOutputDevice.updateConfig(config)
